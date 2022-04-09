@@ -7,5 +7,5 @@ this is a blog of record
 - https://markdown-docs-zh.readthedocs.io/zh_CN/latest/
 
 ---
-permalink: /index.html
+permalink: /site/index.html
 ---
