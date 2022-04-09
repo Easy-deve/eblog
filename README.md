@@ -1,2 +1,2 @@
 # eblog
-this is a record of blog
+this is a blog of record
