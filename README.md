@@ -5,7 +5,4 @@ this is a blog of record
 # reference
 - https://docs.github.com/cn/pages
 - https://markdown-docs-zh.readthedocs.io/zh_CN/latest/
-
----
-permalink: /site/index.html
----
+- https://www.mkdocs.org/user-guide/deploying-your-docs/
