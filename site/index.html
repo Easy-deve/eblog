@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="None">
+  
+  
+  <link rel="shortcut icon" href="img/favicon.ico">
+  <title>eblog</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700" />
+
+  <link rel="stylesheet" href="css/theme.css" />
+  <link rel="stylesheet" href="css/theme_extra.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "\u6587\u6863";
+    var mkdocs_page_input_path = "index.md";
+    var mkdocs_page_url = null;
+  </script>
+  
+  <script src="js/jquery-2.1.1.min.js" defer></script>
+  <script src="js/modernizr-2.8.3.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+        <a href="." class="icon icon-home"> eblog</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="./search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+                <ul class="current">
+                    <li class="toctree-l1 current"><a class="reference internal current" href=".">文档</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#_2">学习记录</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#git">Git</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#docker">Docker</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_3">问题记录</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#cicd">CI/CD</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#dinddocker-in-docker">DIND（docker in docker）</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#_4">其他</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#mybatis-plus-in-condition">mybatis-plus in condition</a>
+    </li>
+        </ul>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                    </li>
+                </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href=".">eblog</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".">Docs</a> &raquo;</li>
+    
+      
+    
+    <li>文档</li>
+    <li class="wy-breadcrumbs-aside">
+      
+    </li>
+  </ul>
+  
+  <hr/>
+</div>
+
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="_1">文档</h1>
+<p>学习工作记录文档，包括学习总结和工作中遇到的问题记录。</p>
+<h2 id="_2">学习记录</h2>
+<h3 id="git">Git</h3>
+<h3 id="docker">Docker</h3>
+<h2 id="_3">问题记录</h2>
+<h3 id="cicd">CI/CD</h3>
+<h4 id="dinddocker-in-docker">DIND（docker in docker）</h4>
+<p>描述：编写集成测试，需要用到spicedb，通过代码的dockertest启动一个docker spicedb容器，通过grpc连接spicedb容器向其中添加数据做测试，gitlab-ci的test报错历史</p>
+<blockquote>
+<p>Could not start resource: : dial unix /var/run/docker.sock: connect: no such file or directory</p>
+</blockquote>
+<p>原因：gitlab-ci中的镜象是golang，所以启动后runner-test内部只有golang的环境，并且宿主机启动runner的配置中也没有挂载docker.sock，导致内部无法访问外部的docker
+修改：将gitlab-ci中的镜象改成docker镜象，同时添加service: docker-dind</p>
+<blockquote>
+<p>/bin/bash: line 115: docker: command not found</p>
+</blockquote>
+<p>原因：把test-coverage中的image删掉了
+修改：把test-coverage中的image加上，并且使用的是docker:19.03.13</p>
+<blockquote>
+<p>ERROR: error during connect: Get http://docker:2375/v1.40/info: dial tcp: lookup docker on 100.100.2.136:53: no such host</p>
+</blockquote>
+<p>原因：由于没有给docker配置相应的docker主机
+修改：给docker添加相应的主机，在service中添加：
+services 
+     name: docker:19.03.12-dind 
+     alias: dockerhost
+在gitlab-ci中添加：
+variables:
+     DOCKER_HOST: tcp://dockerhost:2375/</p>
+<blockquote>
+<p>ERROR: Cannot connect to the Docker daemon at tcp://dockerhost:2375/. Is the docker daemon running?</p>
+</blockquote>
+<p>原因：由于我们使用的是docker官方的docker：dind镜像，该镜像在18.09+下做了变化，主要是TLS证书认证这块。gitlab没有适配这个变化
+修改：gitlab-ci.yml文件里面添加一下配置：
+variables:
+     DOCKER_DRIVER: overlay2
+     DOCKER_TLS_CERTDIR: ""</p>
+<blockquote>
+<p>/bin/sh: eval: line 127: go: not found</p>
+</blockquote>
+<p>原因：命令行中去下载并安装golang，安装后没有生效，这是由于通过docker启动的这个runner-test是一个alpine环境，缺少很多基础依赖
+修改：在gitlab-ci.yml中添加脚本安装必需的依赖，脚本命令：
+    apk update &amp;&amp; apk add -f --virtual build-essential
+    apk add make
+    apk add gcc
+    apk add musl-dev</p>
+<blockquote>
+<p>uname -c uname: unrecognized option: c</p>
+</blockquote>
+<p>原因：中间通过命令查看runner-test的系统信息，命令不对
+修改：使用uname -a，系统信息：Linux runner-vxe1ctwm-project-1555-concurrent-0 4.18.0-147.5.1.el8_1.x86_64 #1 SMP Wed Feb 5 02:00:39 UTC 2020 x86_64 Linux</p>
+<blockquote>
+<p>cgo: exec gcc: exec: "gcc": executable file not found in $PATH</p>
+</blockquote>
+<p>原因：缺少gcc依赖
+修改：添加命令apk add gcc下载依赖</p>
+<blockquote>
+<p>Do you want to continue [Y/n]?</p>
+</blockquote>
+<p>原因：安装过程有需要确认的步骤
+解决：在 apk add 后加 -f强制执行，不需确认</p>
+<blockquote>
+<p>/bin/sh: eval: line 133: make: not found</p>
+</blockquote>
+<p>原因：缺少make的依赖
+解决：添加命令apk add make下载依赖</p>
+<blockquote>
+<p>_cgo_export.c:3:10: fatal error: stdlib.h: No such file or directory 3 | #include <stdlib.h></p>
+</blockquote>
+<p>原因：缺少stdlib.h的包
+解决：添加以下命令：
+     sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+     apk update &amp;&amp; apk add -f --virtual build-essential</p>
+<blockquote>
+<p>panic: test timed out after 10m0s</p>
+</blockquote>
+<p>原因：由于没有拉取spicedb的镜象，导致启动spicedb超时
+解决：添加以下命令：
+      docker pull jauderho/spicedb:v1.1.0</p>
+<blockquote>
+<p>filter_test.go:340: rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing dial tcp 127.0.0.1:32768: connect: connection refused" Error:  Condition never satisfied Test:  TestAuthzed_Filter Messages: could not start test server</p>
+</blockquote>
+<p>原因：使用grpc连接spicedb发现连接被拒绝，是因为代码中用的是loaclhost，而runner-test中的docker主机是我们开始配置的dockerhost
+解决：修改代码中的locahost，改为dockerhost，测试通过</p>
+<p>总结：使用gitlab-ci的docker in docker要注意内部docker的环境依赖问题以及主机的配置问题</p>
+<p>golang-ci.yaml 附件：</p>
+<pre><code class="language-yaml"># image: golang:1.16.12-alpine3.14
+stages: # List of stages for jobs, and their order of execution
+  - pull-code
+  - lint-check
+  - test
+  - build
+  - deploy
+
+#pull-code-job:
+#  stage: pull-code
+#  before_script:
+#    - echo &quot;pull code start&quot;
+#  script:
+#    - echo &quot;pulling code&quot;
+#  after_script:
+#    - echo &quot;pull code end&quot;
+services:
+  - name: docker:19.03.12-dind
+    alias: dockerhost
+
+variables:
+  DOCKER_HOST: tcp://dockerhost:2375/
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: &quot;&quot;
+  DOCKER_AUTH_CONFIG: https://hub-mirror.c.163.com
+
+lint-check-job:
+  stage: lint-check
+  timeout: 300 seconds
+    # 仅dev分支和test分支进行lint检查
+    #  image:
+    #    name: golangci/golangci-lint:v1.30.0-alpine
+    #    entrypoint: [ &quot;&quot; ]entrypoint
+    #  only:
+    #    refs:
+    #      - master
+  # 修改特定目录时触发此job
+  #    changes:
+  #      - /
+  tags:
+    - bj-shell
+  before_script:
+    - echo &quot;lint tool check source code start&quot;
+  script:
+    - echo &quot;lint tool checking&quot;
+    - go version
+    - make lint
+  after_script:
+    - echo &quot;lint tool check source code end&quot;
+  artifacts:
+    reports:
+      codequality: gl-code-quality-report.json
+    paths:
+      - gl-code-quality-report.json
+
+build-job: # This job runs in the build stage, which runs first.
+  stage: build
+  before_script:
+    - echo &quot;Compile the code start&quot;
+  script:
+    - echo &quot;compling&quot;
+  after_script:
+    - echo &quot;Compile complete.&quot;
+
+test-coverage: # This job runs in the test stage.
+  stage: test    # It only starts when the job in the build stage completes successfully.
+  image:
+    name: docker:19.03.12
+  tags:
+    - bj-docker
+  timeout: 3600 seconds
+  before_script:
+    - docker info
+  script:
+    - echo &quot;prepare golang environment...&quot;
+    - wget https://studygolang.com/dl/golang/go1.16.7.linux-amd64.tar.gz &amp;&amp; tar -C /usr/local -xzf go1.16.7.linux-amd64.tar.gz
+    - mkdir /lib64 &amp;&amp; ln -s /lib/ld-musl-x86_64.so.1 /lib64/ld-linux-x86-64.so.2
+    - export PATH=$PATH:/usr/local/go/bin
+    - export GOPROXY=https://goproxy.cn,direct
+    - go env -w GOPROXY=https://goproxy.cn
+    - sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+    - apk update &amp;&amp; apk add -f --virtual build-essential
+    - apk add make
+    - apk add gcc
+    - apk add musl-dev
+    - docker pull jauderho/spicedb:v1.1.0
+    - echo &quot;Running unit tests...&quot;
+    - export DOCKER_ALIAS=dockerhost
+    - make cover
+
+#deploy-dev-job:      # This job runs in the deploy stage.
+##  needs:
+#  stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
+#  only:
+#    - dev
+#  script:
+#    - echo &quot;Deploying application on dev...&quot;
+#    - echo &quot;Application successfully deployed.&quot;
+#deploy-test-job:      # This job runs in the deploy stage.
+#  stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
+#  only:
+#    - test
+#  script:
+#    - echo &quot;Deploying application on test...&quot;
+#    - echo &quot;Application successfully deployed.&quot;
+#deploy-pro-job:      # This job runs in the deploy stage.
+#  stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
+#  only:
+#    - main
+#  script:
+#    - echo &quot;Deploying application on prod...&quot;
+#    - echo &quot;Application successfully deployed.&quot;
+</code></pre>
+<h3 id="_4">其他</h3>
+<h4 id="mybatis-plus-in-condition">mybatis-plus in condition</h4>
+<p>问题描述：在mybatis-plus中使用in条件过滤数据，发现in条件失效</p>
+<p>编码及日志：queryWrapper.in("id", queryResult.getList().isEmpty() ? "" : queryResult.getList());</p>
+<pre><code class="language-java">2022-04-09 17:46:31 DEBUG c.zhigui.cube.mapper.auto.SysMenuMapper.selectList &gt;&gt;&gt; ==&gt;  Preparing: SELECT id,name,definition,i18n,type,url,parent_id,desc_no FROM sys_menu WHERE (type = ? AND id IN (?))
+2022-04-09 17:46:31 DEBUG c.zhigui.cube.mapper.auto.SysMenuMapper.selectList &gt;&gt;&gt; ==&gt; Parameters: PLAT(String), [11, 12, 13, 14](ArrayList)
+2022-04-09 17:46:31 DEBUG c.zhigui.cube.mapper.auto.SysMenuMapper.selectList &gt;&gt;&gt; &lt;==      Total: 0
+</code></pre>
+<ol>
+<li>查看QueryWrapper的源码，对于in方法的传参支持value...和Collection，并且我这里的参数类型是List，属于Collection集合。带着问题进行了debug，查看queryWrapper的内部拼接，如下图：</li>
+</ol>
+<p><img src="img/image-1.png" alt="Screenshot" style="zoom:50%;" /></p>
+<p>参数在arg2中多嵌套了一层，这导致in内参数不能对应，所以无法查到数据。</p>
+<ol>
+<li>
+<p>后面查看了一些网上的资料，由于in方法提供了两种方式，如果参数不明确，会导致参数类型无法识别，因为这里我使用的是一个三元表达式。</p>
+</li>
+<li>
+<p>后面修改成：queryWrapper.in("id", queryResult.getList()); 再次debug，查看queryWrapper的内部拼接，如下图：</p>
+</li>
+</ol>
+<p><img src="img/image-2.png" alt="Screenshot" style="zoom:50%;" /></p>
+<p>参数位置变正常，数据也能查询出来。</p>
+<p>日志：</p>
+<pre><code class="language-java">2022-04-09 18:09:21 DEBUG c.zhigui.cube.mapper.auto.SysMenuMapper.selectList &gt;&gt;&gt; ==&gt;  Preparing: SELECT id,name,definition,i18n,type,url,parent_id,desc_no FROM sys_menu WHERE (type = ? AND id IN (?,?,?,?))
+2022-04-09 18:09:21 DEBUG c.zhigui.cube.mapper.auto.SysMenuMapper.selectList &gt;&gt;&gt; ==&gt; Parameters: PLAT(String), 11(String), 12(String), 13(String), 14(String)
+2022-04-09 18:09:21 DEBUG c.zhigui.cube.mapper.auto.SysMenuMapper.selectList &gt;&gt;&gt; &lt;==      Total: 4
+</code></pre>
+<ol>
+<li>疑惑</li>
+</ol>
+<p>官网中in方法的介绍中提到：如果集合为 empty 则不会进行 sql 拼接，</p>
+<p>不太明白这里的sql拼接是指in的sql拼接还是里面的内容不做拼接，测试的实际情况是还会有in条件，in条件后面的括号中没有任何值。个人觉得这里是否不太妥当，如果不去手动判断集合空做特殊处理，这里是会报错的。</p>
+<ol>
+<li>总结</li>
+</ol>
+<p>多思考多看源码多实践。</p>
+              
+            </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+    
+  </span>
+</div>
+    <script>var base_url = '.';</script>
+    <script src="js/theme_extra.js" defer></script>
+    <script src="js/theme.js" defer></script>
+      <script src="search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>
+
+<!--
+MkDocs version : 1.2.3
+Build Date UTC : 2022-04-09 10:23:19.846816+00:00
+-->
