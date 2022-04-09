@@ -2,7 +2,7 @@
 this is a blog of record
 
 # exhibit
-- https://easy-deve.github.io/eblog/
+https://easy-deve.github.io/eblog/
 
 # reference
 - https://docs.github.com/cn/pages
