@@ -71,6 +71,8 @@
         <ul>
     <li class="toctree-l4"><a class="reference internal" href="#mybatis-plus-in-condition">mybatis-plus in condition</a>
     </li>
+    <li class="toctree-l4"><a class="reference internal" href="#spring-resttemplateurlencode">Spring-RestTemplate之urlencode参数解析异常</a>
+    </li>
         </ul>
     </li>
         </ul>
@@ -349,6 +351,71 @@ test-coverage: # This job runs in the test stage.
 <li>总结</li>
 </ol>
 <p>多思考多看源码多实践。</p>
+<h4 id="spring-resttemplateurlencode">Spring-RestTemplate之urlencode参数解析异常</h4>
+<p>问题：在开发中A系统通过<code>restTemplate</code>去调用外部的B系统，分页或者列表查询时传参有中文会出现查询不到数据的情况，但是通过postman或者curl却能正常查到数据，开始怀疑时中文编码的问题。</p>
+<p>调用外部系统代码：</p>
+<pre><code class="language-java">    @Test
+  void restTemplateTest() {
+    String url = &quot;http://host:port/api/v1/apps/{appId}/roles&quot; +
+        &quot;?name=大&amp;pageSize=10&amp;pageNum=1&quot;;
+    UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(url);
+
+    final HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    headers.set(LuwuConstants.COLUMN_USER_ID, &quot;c85aa18737e84db9a813a542c270c2a1&quot;);
+    headers.set(LuwuConstants.COLUMN_USER_ID, &quot;391f837e8a10491b92da5dac7ff17673&quot;);
+    HttpEntity&lt;String&gt; entity = new HttpEntity&lt;&gt;(headers);
+
+    RestTemplate restTemplate = new RestTemplate();
+    final ResponseEntity&lt;String&gt; result = restTemplate.exchange(uriBuilder.toUriString(),
+        HttpMethod.GET, entity, String.class);
+    System.out.println(result.getBody());
+  }
+</code></pre>
+<p>系统日志：</p>
+<pre><code class="language-shell">21:11:41.008 [Test worker] DEBUG org.springframework.web.client.RestTemplate - HTTP GET http://host:port/api/v1/apps/3450749dcc9244368fbf1ee967707145/roles?name=%25E5%25A4%25A7&amp;pageSize=10&amp;pageNum=1
+21:11:41.016 [Test worker] DEBUG org.springframework.web.client.RestTemplate - Accept=[text/plain, application/json, application/*+json, */*]
+21:11:41.131 [Test worker] DEBUG org.springframework.web.client.RestTemplate - Response 200 OK
+21:11:41.134 [Test worker] DEBUG org.springframework.web.client.RestTemplate - Reading to [java.lang.String] as &quot;application/json;charset=utf-8&quot;
+{&quot;code&quot;:&quot;200&quot;,&quot;message&quot;:&quot;&quot;,&quot;data&quot;:{&quot;list&quot;:[],&quot;pagination&quot;:{&quot;total&quot;:0,&quot;pageSize&quot;:10,&quot;pageNum&quot;:1}}}
+BUILD SUCCESSFUL in 5s
+5 actionable tasks: 2 executed, 3 up-to-date
+9:11:41 下午: Task execution finished ':test --tests &quot;com.zhigui.cube.CubeApplicationTest.restTemplateTest&quot;'.
+</code></pre>
+<p>通过浏览器发送：</p>
+<p><img src="img/image-3.png" alt="Screenshot" style="zoom:50%;" /></p>
+<p>仔细对比上下条件中的中文编码值，浏览器发送的编码值是：<code>%E5%A4%A7</code>；而通过<code>restTemplate</code>发送的编码是：<code>%25E5%25A4%25A7</code>。原来<code>restTemplate</code>发送时会将请求参数中<code>%</code>编码为<code>%25</code>，浏览器传进来时已经做了编码，但是通过<code>restTemplate</code>发送时又编码了一道，导致参数已经不是原来的参数了，所以请求数据查询不出来。</p>
+<p>查看源码发现，如果<code>restTemplate</code>的URI传入的是string类型时，<code>restTemplate</code>会将URI中的参数进行转码，如果传入是URI对象时，会使用使用URI中的参数，此时的参数已被URI转码了。</p>
+<p>修改后：</p>
+<pre><code class="language-java">    @Test
+  void restTemplateTest() {
+    String url = &quot;http://host:port/api/v1/apps/{appId}/roles&quot; +
+        &quot;?name=大&amp;pageSize=10&amp;pageNum=1&quot;;
+    UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(url);
+
+    final HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    headers.set(LuwuConstants.COLUMN_USER_ID, &quot;c85aa18737e84db9a813a542c270c2a1&quot;);
+    headers.set(LuwuConstants.COLUMN_USER_ID, &quot;391f837e8a10491b92da5dac7ff17673&quot;);
+    HttpEntity&lt;String&gt; entity = new HttpEntity&lt;&gt;(headers);
+    RestTemplate restTemplate = new RestTemplate();
+    final ResponseEntity&lt;String&gt; result = restTemplate.exchange(uriBuilder.build().toUri(),
+        HttpMethod.GET, entity, String.class);
+    System.out.println(result.getBody());
+  }
+</code></pre>
+<p>系统日志：</p>
+<pre><code class="language-shell">21:14:20.942 [Test worker] DEBUG org.springframework.web.client.RestTemplate - HTTP GET http://host:port/api/v1/apps/3450749dcc9244368fbf1ee967707145/roles?name=大&amp;pageSize=10&amp;pageNum=1
+21:14:20.956 [Test worker] DEBUG org.springframework.web.client.RestTemplate - Accept=[text/plain, application/json, application/*+json, */*]
+21:14:21.070 [Test worker] DEBUG org.springframework.web.client.RestTemplate - Response 200 OK
+21:14:21.077 [Test worker] DEBUG org.springframework.web.client.RestTemplate - Reading to [java.lang.String] as &quot;application/json;charset=utf-8&quot;
+{&quot;code&quot;:&quot;200&quot;,&quot;message&quot;:&quot;&quot;,&quot;data&quot;:{&quot;list&quot;:[{&quot;id&quot;:&quot;404f97054e344db4a56979a3fbde781a&quot;,&quot;name&quot;:&quot;3450749dcc9244368fbf1ee967707145|大小角色&quot;,&quot;displayName&quot;:&quot;大小角色&quot;,&quot;createdAt&quot;:&quot;2022-04-15T08:12:42.102Z&quot;}],&quot;pagination&quot;:{&quot;total&quot;:1,&quot;pageSize&quot;:10,&quot;pageNum&quot;:1}}}
+BUILD SUCCESSFUL in 5s
+5 actionable tasks: 2 executed, 3 up-to-date
+9:14:21 下午: Task execution finished ':test --tests &quot;com.zhigui.cube.CubeApplicationTest.restTemplateTest&quot;'.
+</code></pre>
+<p>数据查询正常！</p>
+<p>总结：当使用<code>RestTemplate</code>发起请求时，url参数中带有中文或需要编码时，应该使用URI对象作为exchange方法的传参，而不是字符串。</p>
               
             </div>
           </div>
@@ -394,5 +461,5 @@ test-coverage: # This job runs in the test stage.
 
 <!--
 MkDocs version : 1.2.3
-Build Date UTC : 2022-04-09 11:44:43.845787+00:00
+Build Date UTC : 2022-04-15 13:42:58.323601+00:00
 -->
