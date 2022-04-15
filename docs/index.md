@@ -268,7 +268,7 @@ test-coverage: # This job runs in the test stage.
 调用外部系统代码：
 
 ```java
-	@Test
+@Test
   void restTemplateTest() {
     String url = "http://host:port/api/v1/apps/{appId}/roles" +
         "?name=大&pageSize=10&pageNum=1";
@@ -313,7 +313,7 @@ BUILD SUCCESSFUL in 5s
 修改后：
 
 ```java
-	@Test
+@Test
   void restTemplateTest() {
     String url = "http://host:port/api/v1/apps/{appId}/roles" +
         "?name=大&pageSize=10&pageNum=1";
