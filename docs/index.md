@@ -263,12 +263,12 @@ test-coverage: # This job runs in the test stage.
 
 #### Spring-RestTemplate之urlencode参数解析异常
 
-问题：在开发中A系统通过`restTemplate`去调用外部的B系统，分页或者列表查询时传参有中文会出现查询不到数据的情况，但是通过postman或者curl却能正常查到数据，开始怀疑时中文编码的问题。
+问题：在开发中A系统通过`restTemplate`去调用外部的B系统，分页或者列表查询时传参有中文会出现查询不到数据的情况，但是通过postman或者curl却能正常查到数据，开始怀疑是中文编码的问题。
 
 调用外部系统代码：
 
 ```java
-@Test
+ @Test
   void restTemplateTest() {
     String url = "http://host:port/api/v1/apps/{appId}/roles" +
         "?name=大&pageSize=10&pageNum=1";
@@ -308,12 +308,12 @@ BUILD SUCCESSFUL in 5s
 
 
 
-查看源码发现，如果`restTemplate`的URI传入的是string类型时，`restTemplate`会将URI中的参数进行转码，如果传入是URI对象时，会使用使用URI中的参数，此时的参数已被URI转码了。
+查看源码发现，如果`restTemplate`的URI传入的是string类型时，`restTemplate`会将URI中的参数进行转码，如果传入是URI对象时，会使用URI中的参数，此时的参数已被URI转码了。
 
 修改后：
 
 ```java
-@Test
+ @Test
   void restTemplateTest() {
     String url = "http://host:port/api/v1/apps/{appId}/roles" +
         "?name=大&pageSize=10&pageNum=1";
