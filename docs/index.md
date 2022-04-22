@@ -397,6 +397,26 @@ DAO中使用到的关键注解有：
 @Container 注释与Testcontainers注释一起使用，以标记容器由testcontainer去管理。
 @DynamicPropertySource 用于集成测试的方法级注释，这些测试需要将具有动态值的属性添加到环境的PropertySource中。
 
+#### Reference
+
+[https://doczhcn.gitbook.io/junit5/index/index-2/annotations] (Junit 5官方文档中文版)
+
+[https://javadoc.io/doc/org.mockito/mockito-core/latest/org/mockito/Mockito.html] (Mockito 官方文档)
+
+[https://spring.io/guides/gs/testing-web/] (Spring Testing the Web Layer)
+
+[https://medium.com/backend-habit/integrate-junit-and-mockito-unit-testing-for-controller-layer-91bb4099c2a5] (Web Layer)
+
+[https://www.cnblogs.com/NeverCtrl-C/p/8996564.html] (Web Layer)
+
+[https://baomidou.com/pages/226c21/] (Mybatis-Plus)
+
+[https://github.com/binkley/modern-java-practices] (modern java practices)
+
+[https://www.testcontainers.org/] (Testcontainers 官网)
+
+[https://rieckpil.de/howto-write-spring-boot-integration-tests-with-a-real-database/] (Testcontainers mysql)
+
 ### Git
 
 ### Docker

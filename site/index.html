@@ -59,6 +59,8 @@
     </li>
     <li class="toctree-l4"><a class="reference internal" href="#dao">DAO</a>
     </li>
+    <li class="toctree-l4"><a class="reference internal" href="#reference">Reference</a>
+    </li>
         </ul>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#git">Git</a>
@@ -477,6 +479,16 @@ class TraceBatchesServiceImplTest extends BaseServiceTest {
 <p>@Testcontainers 主要是用作测试中自动启动、停止容器的。测试容器会找到所有用Container标注的字段，并在容器的生命周期内调用它们的方法。<strong>注：声明为静态字段的容器将在测试方法之间共享，它们只会在任何测试方法执行之前启动一次，并在最后一个测试方法执行之后停止。声明为实例字段的容器将为每个测试方法启动和停止</strong>。
 @Container 注释与Testcontainers注释一起使用，以标记容器由testcontainer去管理。
 @DynamicPropertySource 用于集成测试的方法级注释，这些测试需要将具有动态值的属性添加到环境的PropertySource中。</p>
+<h4 id="reference">Reference</h4>
+<p>[https://doczhcn.gitbook.io/junit5/index/index-2/annotations] (Junit 5官方文档中文版)</p>
+<p>[https://javadoc.io/doc/org.mockito/mockito-core/latest/org/mockito/Mockito.html] (Mockito 官方文档)</p>
+<p>[https://spring.io/guides/gs/testing-web/] (Spring Testing the Web Layer)</p>
+<p>[https://medium.com/backend-habit/integrate-junit-and-mockito-unit-testing-for-controller-layer-91bb4099c2a5] (Web Layer)</p>
+<p>[https://www.cnblogs.com/NeverCtrl-C/p/8996564.html] (Web Layer)</p>
+<p>[https://baomidou.com/pages/226c21/] (Mybatis-Plus)</p>
+<p>[https://github.com/binkley/modern-java-practices] (modern java practices)</p>
+<p>[https://www.testcontainers.org/] (Testcontainers 官网)</p>
+<p>[https://rieckpil.de/howto-write-spring-boot-integration-tests-with-a-real-database/] (Testcontainers mysql)</p>
 <h3 id="git">Git</h3>
 <h3 id="docker">Docker</h3>
 <h3 id="k8s">K8S</h3>
@@ -824,5 +836,5 @@ BUILD SUCCESSFUL in 5s
 
 <!--
 MkDocs version : 1.2.3
-Build Date UTC : 2022-04-22 10:29:35.331197+00:00
+Build Date UTC : 2022-04-22 10:51:17.873289+00:00
 -->
