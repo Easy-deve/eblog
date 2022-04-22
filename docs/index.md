@@ -4,6 +4,399 @@
 
 ## 学习记录
 
+### Unit Test
+
+最近学习了一些Java Unit Test方面的知识，空闲之余归纳总结一下，加深记忆。
+
+现在主流的开发一般都是基于SpringBoot框架开发的，结构大多数是Controller + Service + DAO，Controller一般是数据展示层，Service是业务逻辑层，DAO一般是数据持久层，持久层会使用ORM框架开发。因此我们的单元测试是基于这三层进行的，ORM框架选择的是Mybatis-Plus，测试框架使用的Spring自带的Junit4和Junit5。
+
+测试用到的一些测试工具：
+
+```java
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'		
+		testImplementation 'junit:junit:4.13.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+    testImplementation 'com.h2database:h2:2.1.210'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0' // Junit5 engine
+    testRuntimeOnly 'org.junit.vintage:junit-vintage-engine:5.7.0' // Junit4 engine
+    testCompileOnly 'org.mockito:mockito-junit-jupiter:2.19.0'
+    testCompileOnly 'org.mockito:mockito-core:2.19.0'
+    testImplementation "org.testcontainers:mysql:1.16.3"
+    testImplementation "org.testcontainers:junit-jupiter:1.16.3"
+```
+
+#### Controller
+
+Controller中使用到的关键注解和类有：
+
+* @WebMvcTest
+* @MockBean
+* @BeforeEach
+* MockMvc
+
+@WebMvcTest 是用于只关注Spring MVC组件的Spring MVC测试的注释， 使用此注释将禁用完全自动配置，而只应用于与MVC测试相关的配置，不能应用于@Component、@Service或@Repository 这些bean。一般该注解位于测试类上面的。如果想加载完整的应用程序配置并使用MockMVC，那么应该考虑结合@SpringBootTest和@AutoConfigureMockMvc来代替这个注释，这种情况多用于集成测试。
+
+```java
+/**
+ * TraceBatchesController uint test.
+ */
+@WebMvcTest(TraceBatchesController.class)
+class TraceBatchesControllerTest {
+}
+```
+
+#### Service
+
+Service层的测试用到了一些测试工具，分别有：
+
+* Mockito
+* spring-boot-starter-test
+
+Mockito主要是用来做存根的，当方法中需要调用其他对象的引用，如果不想真实的去调用可以使用Mockito去模拟调用返回想要的结果。Mockito中有许多定义的注解，可以很方便的去模拟不同的对象，其中最常用的就是@InjectMocks、@Mock和@Spy注解。
+
+> @InjectMocks
+
+该注解标记的字段表明该对象是一个可以注入依赖的对象，通常会将标记了@Mack的字段注入到该对象中，所以@InjectMocks注解通常会和@Mock注解结合使用。**注：这些注解标注的字段此时还未初始化，可以手动初始化也可以使用注解@ExtendWith(MockitoExtension.class)自动初始化，Junit5使用的@ExtendWith(MockitoExtension.class)，Junit4使用的是 @RunWith(MockitoJUnitRunner.class)**
+
+> @Mock
+
+该注解是用来模拟真实的对象的，模拟后可使用when...thenReturn...的方式模拟对象方法的调用，真实的逻辑在调用该方法时会返回模拟对应的返回值，从而达到真实逻辑运行的效果。@Mock注解通常会和@InjectMocks注解结合使用。
+
+> @Spy
+
+该注解是用来实现模拟对象的部分真实逻辑的，当你真实的创建一个类的对象后，想测试该类的A方法时，发现方法内部又调用了该类的B方法，此时你不想真正的去走B方法希望可以模拟B方法，这时你就可以使用@Spy去实现该场景。
+
+Service层逻辑
+
+​	主要是创建traceBatches这个类，然后将traceBatches保存到数据库，后面会添加相应的数据权限给当前用户。
+
+```java
+@Service
+public class TraceBatchesServiceImpl extends MPJBaseServiceImpl<TraceBatchesMapper, TraceBatches>
+    implements ITraceBatchesService, ILuwuService {
+  
+  private final IAttachmentService attachmentService;
+  
+  @Value("${trace-batches.switch.extension-enable}")
+  private Boolean extensionEnable;
+
+  @Value("${trace-batches.switch.closed-enable}")
+  private Boolean closedEnable;
+  
+  @Lazy
+  public TraceBatchesServiceImpl(final IAttachmentService attachmentService) {
+    super();
+    this.attachmentService = attachmentService;
+  }
+  
+  public Integer create(final TraceBatchesAddRequest request,
+      final UserDTO userdto) throws SqlOtherException, DuplicatedTraceBatchesException {
+
+    final TraceBatches traceBatches = generateTraceBatches(request, userdto);
+    try {
+      save(traceBatches);
+    } catch (DuplicateKeyException e) {
+      log.warn("saving traceBatches volatile unique constraint", e);
+      if (Objects.requireNonNull(e.getMessage())
+          .contains(Constants.UNIQUE_CONFLICT_ERROR_MESSAGE)) {
+        throw new DuplicatedTraceBatchesException("duplicated creation with traceBatches", e,
+            traceBatches);
+      }
+      throw new SqlOtherException("Saving traceBatches encounters "
+          + "other sql exception", e);
+    }
+
+    final ItemRequest itemRequest = generateItemRequest(traceBatches.getId(),
+        request.getProductId(), userdto);
+    permission(itemRequest, userdto);
+
+    return traceBatches.getId();
+  }
+  
+  public TraceBatches generateTraceBatches(final TraceBatchesAddRequest request,
+      final UserDTO userdto) {
+    final TraceBatches traceBatches = new TraceBatches();
+    // do some set things
+    return traceBatches;
+  }
+  
+  public ItemRequest generateItemRequest(final int traceBatchesId,
+      final int productId,
+      final UserDTO userdto) {
+    final ItemRequest itemRequest = new ItemRequest();
+    // do some set things
+    return itemRequest;
+  }
+}
+```
+
+Service Test层逻辑
+
+​	Base Service Test 通常建立一个基础类，让该类去添加通用注解，测试去继承该类去初始化对应的模拟对象。
+
+```java
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+/**
+ * base service test for enable Mockito annotations
+ * to use @InjectMocks and @Mock annotation.
+ */
+@ExtendWith(MockitoExtension.class)
+public class BaseServiceTest {
+}
+```
+
+​	TraceBatch Service Test 首先通过@InjectMocks和@Mock去确定要测试对象并注入关联对象。
+
+```java
+class TraceBatchesServiceImplTest extends BaseServiceTest {
+  @InjectMocks
+  private TraceBatchesServiceImpl traceBatchesServiceTest;
+  @Mock
+  private IAttachmentService attachmentService;
+}
+```
+
+​	然后去创建测试方法去测试真实的create方法逻辑，此时发现要测试的create方法中用到了save方法，但是save方法不是TraceBatchesServiceImpl本身的方法，到这里我们知道要去模拟save这个方法了。查看源码找到这个save方法是IService接口内的默认方法。
+
+```java
+public interface IService<T> {
+  ...
+  default boolean save(T entity) {
+      return SqlHelper.retBool(getBaseMapper().insert(entity));
+  }
+  ...
+}
+```
+
+​	去模拟save方法就是要对测试类中的部分方法做模拟，所以可以用spy的方式去实现。细心观察这里多加了一个`generateTraceBatches`方法的模拟，是为了保证真实的save方法中的参数和模拟的参数相一致。**注意模拟save方法时传参一定要和真实的传参一致，如果参数是对象那么内部的set值也要完全一样，不然真实逻辑不会流转到模拟的方法上。**
+
+```java
+  // 将traceBatchesServiceTest赋值给spy，是用spy去模拟部分方法
+	final TraceBatchesServiceImpl spy = spy(traceBatchesServiceTest);
+	// 调用真实的方法创建traceBatches对象
+  final TraceBatches traceBatches = spy.generateTraceBatches(traceBatchesAddRequest, userDto);
+  traceBatches.setId(ID);
+  doReturn(traceBatches).when(spy).generateTraceBatches(traceBatchesAddRequest, userDto);
+  doReturn(true).when(spy).save(traceBatches);
+```
+
+​	最后使用assert去判断create方法返回结果。
+
+```java
+  Assertions.assertEquals(ID, (long) spy.create(traceBatchesAddRequest, userDto),"test: result is equal");
+  verify(spy, times(1)).create(traceBatchesAddRequest, userDto);
+```
+
+​	完整示例：
+
+```java
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
+import com.zhigui.cube.controller.error.DuplicatedTraceBatchesException;
+import com.zhigui.cube.controller.error.SqlOtherException;
+import com.zhigui.cube.dto.UserDTO;
+import com.zhigui.cube.luwu.ExecutorLuwuService;
+import com.zhigui.cube.luwu.ItemRequest;
+import com.zhigui.cube.mapper.auto.MarkMapper;
+import com.zhigui.cube.mapper.auto.ProductMapper;
+import com.zhigui.cube.model.auto.TraceBatches;
+import com.zhigui.cube.request.TraceBatchesAddRequest;
+import com.zhigui.cube.service.impl.TraceBatchesServiceImpl;
+import com.zhigui.cube.utils.Constants;
+import com.zhigui.cube.utils.ExcelUtils;
+import java.lang.reflect.Field;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.springframework.dao.DuplicateKeyException;
+
+/**
+ * TraceBatchesService unit test.
+ */
+@SuppressWarnings({"PMD.AtLeastOneConstructor",
+    "PMD.TooManyStaticImports", "PMD.TooManyMethods"})
+class TraceBatchesServiceImplTest extends BaseServiceTest {
+
+  private static final int ID = 1;
+  private static final int PRODUCT_ID = 1;
+  public static final String EXTENSION = "extension";
+
+  @InjectMocks
+  private TraceBatchesServiceImpl traceBatchesServiceTest;
+
+  @Mock
+  private IAttachmentService attachmentService;
+
+  private TraceBatchesAddRequest traceBatchesAddRequest;
+  private UserDTO userDto;
+
+  @BeforeEach
+  void init() {
+    traceBatchesServiceTest = new TraceBatchesServiceImpl(productMapper,
+         markMapper, stepTempService, stepDetailService,
+        attachmentService, iotInfoService, deviceService, warnPolicyService,
+        executorLuwuService, excelUtils);
+
+    traceBatchesAddRequest = new TraceBatchesAddRequest();
+    traceBatchesAddRequest.setProductId(PRODUCT_ID);
+    traceBatchesAddRequest.setProductNum((long) 10);
+    traceBatchesAddRequest.setExtension(EXTENSION);
+    traceBatchesAddRequest.setNote("5");
+    traceBatchesAddRequest.setClosed(true);
+
+    userDto = new UserDTO();
+    userDto.setUsername("admin");
+    userDto.setAppId("754");
+  }
+
+  void stubSave(final TraceBatchesServiceImpl spy) {
+    final TraceBatches traceBatches =
+        spy.generateTraceBatches(traceBatchesAddRequest, userDto);
+    traceBatches.setId(ID);
+    final ItemRequest itemRequest =
+        spy.generateItemRequest(traceBatches.getId(), traceBatches.getProductId(), userDto);
+    doReturn(traceBatches).when(spy).generateTraceBatches(traceBatchesAddRequest, userDto);
+    doReturn(true).when(spy).save(traceBatches);
+    doNothing().when(spy).permission(itemRequest, userDto);
+  }
+
+  void stubSaveThrow(final TraceBatchesServiceImpl spy, final String errorMsg) {
+    final TraceBatches traceBatches = spy.generateTraceBatches(traceBatchesAddRequest, userDto);
+    doReturn(traceBatches).when(spy).generateTraceBatches(traceBatchesAddRequest, userDto);
+    doThrow(new DuplicateKeyException(errorMsg)).when(spy).save(traceBatches);
+  }
+
+  @Test
+  void createTest() throws NoSuchFieldException, IllegalAccessException,
+      SqlOtherException, DuplicatedTraceBatchesException {
+    updateField(true, true);
+    final TraceBatchesServiceImpl spy = spy(traceBatchesServiceTest);
+    stubSave(spy);
+
+    final int actual = spy.create(traceBatchesAddRequest, userDto);
+    Assertions.assertEquals(ID, (long) actual, "test: method result is equal");
+    verify(spy, times(1))
+        .create(traceBatchesAddRequest, userDto);
+  }
+
+  @Test
+  void createThrowDuplicateTest()
+      throws SqlOtherException, DuplicatedTraceBatchesException,
+      NoSuchFieldException, IllegalAccessException {
+    updateField(true, true);
+    final TraceBatchesServiceImpl spy = spy(traceBatchesServiceTest);
+    stubSaveThrow(spy, Constants.UNIQUE_CONFLICT_ERROR_MESSAGE);
+
+    Assertions.assertThrows(DuplicatedTraceBatchesException.class,
+        () -> spy.create(traceBatchesAddRequest, userDto));
+    verify(spy, times(1))
+        .create(traceBatchesAddRequest, userDto);
+  }
+
+  @Test
+  void createThrowSqlOtherTest()
+      throws SqlOtherException, DuplicatedTraceBatchesException,
+      NoSuchFieldException, IllegalAccessException {
+    updateField(true, true);
+    final TraceBatchesServiceImpl spy = spy(traceBatchesServiceTest);
+    stubSaveThrow(spy, "other exception sql");
+
+    Assertions.assertThrows(SqlOtherException.class,
+        () -> spy.create(traceBatchesAddRequest, userDto));
+    verify(spy, times(1))
+        .create(traceBatchesAddRequest, userDto);
+  }
+
+  @Test
+  void generateTraceBatchesForExtensionTrueTest()
+      throws NoSuchFieldException, IllegalAccessException {
+    updateField(true, true);
+
+    final TraceBatches actual = traceBatchesServiceTest
+        .generateTraceBatches(traceBatchesAddRequest, userDto);
+    Assertions.assertEquals(EXTENSION, actual.getExtension(),
+        "test: extension result is equal");
+  }
+
+  @Test
+  void generateTraceBatchesForExtensionFalseTest()
+      throws NoSuchFieldException, IllegalAccessException {
+    updateField(false, false);
+
+    final TraceBatches actual = traceBatchesServiceTest
+        .generateTraceBatches(traceBatchesAddRequest, userDto);
+    Assertions.assertNotNull(actual.getExtension());
+  }
+
+  @Test
+  void generateTraceBatchesForClosedTrueTest()
+      throws NoSuchFieldException, IllegalAccessException {
+    updateField(false, true);
+
+    final TraceBatches actual = traceBatchesServiceTest
+        .generateTraceBatches(traceBatchesAddRequest, userDto);
+    Assertions.assertNotNull(actual.getClosed());
+  }
+
+  @Test
+  void generateTraceBatchesForClosedFalseTest()
+      throws NoSuchFieldException, IllegalAccessException {
+    updateField(true, false);
+
+    final TraceBatches actual = traceBatchesServiceTest
+        .generateTraceBatches(traceBatchesAddRequest, userDto);
+    Assertions.assertEquals("0", actual.getClosed(),
+        "test: closed result is equal");
+  }
+
+  @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
+  void updateField(final boolean extensionEnable, final boolean closedEnable)
+      throws IllegalAccessException, NoSuchFieldException {
+    final Field field = traceBatchesServiceTest.getClass().getDeclaredField("extensionEnable");
+    field.setAccessible(true);
+    field.set(traceBatchesServiceTest, extensionEnable);
+
+    final Field closedField = traceBatchesServiceTest.getClass().getDeclaredField("closedEnable");
+    closedField.setAccessible(true);
+    closedField.set(traceBatchesServiceTest, closedEnable);
+  }
+
+}
+```
+
+
+
+#### DAO
+
+DAO的测试有多种方式，目前比较常用的有spring test集成h2以及spring test集成testcontainer，下面主要介绍一下这两种方式。
+
+H2：h2的优点就是启动方式简单，速度快；缺点就是h2的部分语法和mysql不兼容，同时会在系统中存在两份初始化sql脚本，会导致两边修改不一致；
+
+Testcontainer：优点是使用docker启动一个mysql实例，初始化脚步可以和系统的是同一份，保证了环境的一致性；缺点是开发者本地需要安装docker，并且CI中要使用docker in docker的模式，启动也比较复杂。
+
+DAO中使用到的关键注解有：
+
+* @Testcontainers
+* @SpringBootTest
+* @Container
+* @DynamicPropertySource
+* @BeforeEach
+* @AfterEach
+
+@Testcontainers 主要是用作测试中自动启动、停止容器的。测试容器会找到所有用Container标注的字段，并在容器的生命周期内调用它们的方法。**注：声明为静态字段的容器将在测试方法之间共享，它们只会在任何测试方法执行之前启动一次，并在最后一个测试方法执行之后停止。声明为实例字段的容器将为每个测试方法启动和停止**。
+@Container 注释与Testcontainers注释一起使用，以标记容器由testcontainer去管理。
+@DynamicPropertySource 用于集成测试的方法级注释，这些测试需要将具有动态值的属性添加到环境的PropertySource中。
+
 ### Git
 
 ### Docker
@@ -349,3 +742,8 @@ BUILD SUCCESSFUL in 5s
 
 
 总结：当使用`RestTemplate`发起请求时，url参数中带有中文或需要编码时，应该使用URI对象作为exchange方法的传参，而不是字符串。
+
+参考文档：
+
+[https://cloud.tencent.com/developer/article/1407555]
+
