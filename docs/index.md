@@ -421,6 +421,8 @@ DAO中使用到的关键注解有：
 
 ### Docker
 
+<img src="img/docker-img.png" alt="Screenshot" style="zoom:50%;" />
+
 ### K8S
 
 ## 问题记录
