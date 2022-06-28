@@ -796,14 +796,18 @@ logback-spring.xml配置如下：
 </configuration>
 ```
 
-开始以为是filter中的DENY丢弃了其他的级别的日志，改为NEUTRAL继续向后过滤，发现和预想的不一样，INFO级别的日志还是打印不出来。网上查了一些原因，很多都提到了additivity这个选项。后面查看官方文档，查了一下additivity的一个原理，终于理解了出现这种现象的原因。
+开始以为是filter中的DENY丢弃了其他的级别的日志，改为NEUTRAL继续向后过滤，发现和预想的不一样，INFO级别的日志还是打印不出来。网上查了一些原因，很多都提到了additivity这个选项。后面查看官方文档，查了一下additivity的一个原理，终于明白了出现这种现象的原因。
 
-主要原因：additivity默认是true，表示开启。true的含义是当前这个包audit的logger会叠加通过root的logger，也就是说日志不仅会在audit下输出也会同时在root下输出，而且audit的日志级别不受root的日志级别控制，就算日志级别比root的低也会输出。false的含义就是日志仅会在audit的logger下输出，audit对应包下的日志信息将不再会叠加输出到root下。所以因为这里additivity使用的是false，因此这个包下的其他日志将不会再打印到主控制台了。
+主要原因：additivity默认是true，表示开启。true的含义是当前audit的logger会叠加到root的logger，也就是说日志不仅会在audit下输出同时也会在root下输出，而且audit的日志级别不受root的日志级别控制，就算日志级别比root的低也会输出。false的含义就是日志仅会在audit的logger下输出，audit对应包下的日志信息将不再会叠加输出到root下。因为这里additivity使用的是false，所以这个包下的其他日志将不会再打印到主控制台了。
 
-这里有两种来自网络的比较形象的图：
+这里有两张来自网络的比较形象的additivity原理图：
 
-<img src="img/logback-additivity-1.png" alt="Screenshot" style="zoom:50%;" />
+<img src="img/logback-additivity.png" alt="Screenshot" style="zoom:30%;" />
 
 
 
-解决方式：知道了原因以及additivity的原理后，对应的解决方式也就知道了，这里一共有两种比较方便的解决方式，方式一是将包的范围缩小，可以指定到对应的类，这样audit的范围就变小了也就不会再影响到其他的日志信息；方式二是将additivity改为true，这样audit内部的其他日志也会输出到主控制台，但是有一个缺点就是audit中的日志也会输出到主控制台，相同的日志会出现两份。个人建议使用第一种方式。
+解决方式：知道了原因以及additivity的原理后，对应的解决方式也就有了，这里一共有两种比较方便的解决方式，方式一是将包的范围缩小，可以指定到对应的类，这样audit的范围变小也就不会再影响到其他的日志信息；方式二是将additivity改为true，这样audit内部的其他日志也会输出到主控制台，但是有一个缺点就是audit中trace级别的日志也会输出到主控制台，相同的日志会出现两份。个人建议使用第一种方式。
+
+参考文档：
+
+[https://logback.qos.ch/manual/configuration.html]
