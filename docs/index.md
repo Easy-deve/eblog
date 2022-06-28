@@ -200,18 +200,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import com.zhigui.cube.controller.error.DuplicatedTraceBatchesException;
-import com.zhigui.cube.controller.error.SqlOtherException;
-import com.zhigui.cube.dto.UserDTO;
-import com.zhigui.cube.luwu.ExecutorLuwuService;
-import com.zhigui.cube.luwu.ItemRequest;
-import com.zhigui.cube.mapper.auto.MarkMapper;
-import com.zhigui.cube.mapper.auto.ProductMapper;
-import com.zhigui.cube.model.auto.TraceBatches;
-import com.zhigui.cube.request.TraceBatchesAddRequest;
-import com.zhigui.cube.service.impl.TraceBatchesServiceImpl;
-import com.zhigui.cube.utils.Constants;
-import com.zhigui.cube.utils.ExcelUtils;
 import java.lang.reflect.Field;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -630,6 +618,8 @@ test-coverage: # This job runs in the test stage.
 #    - echo "Application successfully deployed."
 ```
 
+
+
 ### 其他
 
 #### mybatis-plus in condition
@@ -639,9 +629,9 @@ test-coverage: # This job runs in the test stage.
 编码及日志：queryWrapper.in("id", queryResult.getList().isEmpty() ? "" : queryResult.getList());
 
 ```java
-2022-04-09 17:46:31 DEBUG c.zhigui.cube.mapper.auto.SysMenuMapper.selectList >>> ==>  Preparing: SELECT id,name,definition,i18n,type,url,parent_id,desc_no FROM sys_menu WHERE (type = ? AND id IN (?))
-2022-04-09 17:46:31 DEBUG c.zhigui.cube.mapper.auto.SysMenuMapper.selectList >>> ==> Parameters: PLAT(String), [11, 12, 13, 14](ArrayList)
-2022-04-09 17:46:31 DEBUG c.zhigui.cube.mapper.auto.SysMenuMapper.selectList >>> <==      Total: 0
+2022-04-09 17:46:31 DEBUG c.xxxx.mapper.auto.SysMenuMapper.selectList >>> ==>  Preparing: SELECT id,name,definition,i18n,type,url,parent_id,desc_no FROM sys_menu WHERE (type = ? AND id IN (?))
+2022-04-09 17:46:31 DEBUG c.xxxx.mapper.auto.SysMenuMapper.selectList >>> ==> Parameters: PLAT(String), [11, 12, 13, 14](ArrayList)
+2022-04-09 17:46:31 DEBUG c.xxxx.mapper.auto.SysMenuMapper.selectList >>> <==      Total: 0
 ```
 
 1. 查看QueryWrapper的源码，对于in方法的传参支持value...和Collection，并且我这里的参数类型是List，属于Collection集合。带着问题进行了debug，查看queryWrapper的内部拼接，如下图：
@@ -661,9 +651,9 @@ test-coverage: # This job runs in the test stage.
 日志：
 
 ```java
-2022-04-09 18:09:21 DEBUG c.zhigui.cube.mapper.auto.SysMenuMapper.selectList >>> ==>  Preparing: SELECT id,name,definition,i18n,type,url,parent_id,desc_no FROM sys_menu WHERE (type = ? AND id IN (?,?,?,?))
-2022-04-09 18:09:21 DEBUG c.zhigui.cube.mapper.auto.SysMenuMapper.selectList >>> ==> Parameters: PLAT(String), 11(String), 12(String), 13(String), 14(String)
-2022-04-09 18:09:21 DEBUG c.zhigui.cube.mapper.auto.SysMenuMapper.selectList >>> <==      Total: 4
+2022-04-09 18:09:21 DEBUG c.xxxx.mapper.auto.SysMenuMapper.selectList >>> ==>  Preparing: SELECT id,name,definition,i18n,type,url,parent_id,desc_no FROM sys_menu WHERE (type = ? AND id IN (?,?,?,?))
+2022-04-09 18:09:21 DEBUG c.xxxx.mapper.auto.SysMenuMapper.selectList >>> ==> Parameters: PLAT(String), 11(String), 12(String), 13(String), 14(String)
+2022-04-09 18:09:21 DEBUG c.xxxx.mapper.auto.SysMenuMapper.selectList >>> <==      Total: 4
 ```
 
 4. 疑惑
@@ -675,6 +665,8 @@ test-coverage: # This job runs in the test stage.
 5. 总结
 
    多思考多看源码多实践。
+   
+   
 
 #### Spring-RestTemplate之urlencode参数解析异常
 
@@ -712,7 +704,7 @@ test-coverage: # This job runs in the test stage.
 {"code":"200","message":"","data":{"list":[],"pagination":{"total":0,"pageSize":10,"pageNum":1}}}
 BUILD SUCCESSFUL in 5s
 5 actionable tasks: 2 executed, 3 up-to-date
-9:11:41 下午: Task execution finished ':test --tests "com.zhigui.cube.CubeApplicationTest.restTemplateTest"'.
+9:11:41 下午: Task execution finished ':test --tests "com.xxxx.CubeApplicationTest.restTemplateTest"'.
 ```
 
 通过浏览器发送：
@@ -756,12 +748,10 @@ BUILD SUCCESSFUL in 5s
 {"code":"200","message":"","data":{"list":[{"id":"404f97054e344db4a56979a3fbde781a","name":"3450749dcc9244368fbf1ee967707145|大小角色","displayName":"大小角色","createdAt":"2022-04-15T08:12:42.102Z"}],"pagination":{"total":1,"pageSize":10,"pageNum":1}}}
 BUILD SUCCESSFUL in 5s
 5 actionable tasks: 2 executed, 3 up-to-date
-9:14:21 下午: Task execution finished ':test --tests "com.zhigui.cube.CubeApplicationTest.restTemplateTest"'.
+9:14:21 下午: Task execution finished ':test --tests "com.xxxx.CubeApplicationTest.restTemplateTest"'.
 ```
 
 数据查询正常！
-
-
 
 总结：当使用`RestTemplate`发起请求时，url参数中带有中文或需要编码时，应该使用URI对象作为exchange方法的传参，而不是字符串。
 
@@ -769,3 +759,51 @@ BUILD SUCCESSFUL in 5s
 
 [https://cloud.tencent.com/developer/article/1407555]
 
+
+
+#### Spring-logback additivity
+
+背景：业务需求要通过ELK实现一个审计的功能，可对接任何项目的审计部分。项目的审计部分实现需要用到拦截器和logback的技术，主要的一个实现方式就是通过拦截器拦截每次的一个请求，将请求的操作信息通过日志写入到指定的文件中，供ELK去采集。
+
+问题：配置了logback-spring.xml文件，内部添加一个appender，扫描指定包下的TRACE级别的日志输出到log文件中，但是该包下也有一些INFO级别的日志，发现INFO级别的日志丢失，不再打印到控制台。
+
+logback-spring.xml配置如下：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/base.xml"/>
+
+    <appender name="audit_log" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>log/audit_log.log.%d{yyyy-MM-dd}</fileNamePattern>
+        </rollingPolicy>
+        <encoder charset="UTF-8">
+            <!--格式化输出：%d表示日期，%thread表示线程名，%-5level：级别从左显示5个字符宽度,%msg日志消息,%n是换行符-->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss,CTT} %-5level 15210 %msg%n</pattern>
+        </encoder>
+        <!--这里设置日志级别为trace,只输出trace日志-->
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>TRACE</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+
+    <logger name="com.xxxxxx.xxxx.interceptor" level="TRACE" additivity="false">
+        <appender-ref ref="audit_log" />
+    </logger>
+</configuration>
+```
+
+开始以为是filter中的DENY丢弃了其他的级别的日志，改为NEUTRAL继续向后过滤，发现和预想的不一样，INFO级别的日志还是打印不出来。网上查了一些原因，很多都提到了additivity这个选项。后面查看官方文档，查了一下additivity的一个原理，终于理解了出现这种现象的原因。
+
+主要原因：additivity默认是true，表示开启。true的含义是当前这个包audit的logger会叠加通过root的logger，也就是说日志不仅会在audit下输出也会同时在root下输出，而且audit的日志级别不受root的日志级别控制，就算日志级别比root的低也会输出。false的含义就是日志仅会在audit的logger下输出，audit对应包下的日志信息将不再会叠加输出到root下。所以因为这里additivity使用的是false，因此这个包下的其他日志将不会再打印到主控制台了。
+
+这里有两种来自网络的比较形象的图：
+
+<img src="img/logback-additivity-1.png" alt="Screenshot" style="zoom:50%;" />
+
+
+
+解决方式：知道了原因以及additivity的原理后，对应的解决方式也就知道了，这里一共有两种比较方便的解决方式，方式一是将包的范围缩小，可以指定到对应的类，这样audit的范围就变小了也就不会再影响到其他的日志信息；方式二是将additivity改为true，这样audit内部的其他日志也会输出到主控制台，但是有一个缺点就是audit中的日志也会输出到主控制台，相同的日志会出现两份。个人建议使用第一种方式。
