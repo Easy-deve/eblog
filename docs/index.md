@@ -811,3 +811,136 @@ logback-spring.xml配置如下：
 参考文档：
 
 [https://logback.qos.ch/manual/configuration.html]
+
+
+
+#### 获取List<?>中的泛型
+
+问题：需要实现一个将业务数据导出成Excel的功能，传参设置为Map<String, List<?>>用来接收不同对象的List数据。获取List中的泛型后将其转为Class对象从而得到内部的属性字段。但是将泛型转为Class时报错。
+
+报错日志如下：
+
+```java
+class sun.reflect.generics.reflectiveObjects.TypeVariableImpl cannot be cast to class java.lang.Class (sun.reflect.generics.reflectiveObjects.TypeVariableImpl and java.lang.Class are in module java.base of loader 'bootstrap')
+java.lang.ClassCastException: class sun.reflect.generics.reflectiveObjects.TypeVariableImpl cannot be cast to class java.lang.Class (sun.reflect.generics.reflectiveObjects.TypeVariableImpl and java.lang.Class are in module java.base of loader 'bootstrap')
+```
+
+模拟业务测试方法：
+
+```java
+@Slf4j
+public class ExcelTest {
+  private final Map<String, List<?>> map = new HashMap<>();
+
+  @BeforeEach
+  void init() {
+    List<ProductVM> list = new ArrayList<>();
+    ProductVM productvm = new ProductVM();
+    productvm.setProductNo("1");
+    productvm.setProductName("pinggou");
+    productvm.setStepName("moban");
+    productvm.setStepNo(2);
+    productvm.setStepNum(10);
+    productvm.setProductCreatedBy("psys");
+    productvm.setStepTempCreatedBy("stsys");
+    list.add(productvm);
+    map.put("productVM", list);
+  }
+
+  @Test
+  void testMap() {
+    log.info("开始测试");
+    for (final Map.Entry<String, List<?>> map : map.entrySet()) {
+      final List<?> list = map.getValue();
+      final Type type = list.getClass().getGenericSuperclass();
+      log.info("type: " + type);
+      final ParameterizedType p = (ParameterizedType) type;
+      log.info("parameterizedType: " + p);
+      log.info("parameterizedType,rawType: " + p.getRawType());
+      for (int i = 0; i < p.getActualTypeArguments().length; i++) {
+        log.info("actualTypeArguments" + i + ": " + p.getActualTypeArguments()[i]);
+      }
+      final Class cls = (Class) p.getActualTypeArguments()[0];
+      log.info("class: " + cls);
+    }
+  }
+}
+```
+
+通过打印关键类的名称查找报错原因：
+
+```java
+> Task :processTestResources UP-TO-DATE
+> Task :testClasses
+> Task :test
+15:20:15.478 [Test worker] INFO com.xxxx.cube.utils.ExcelTest - 开始测试
+15:20:15.517 [Test worker] INFO com.xxxx.cube.utils.ExcelTest - type: java.util.AbstractList<E>
+15:20:15.519 [Test worker] INFO com.xxxx.cube.utils.ExcelTest - parameterizedType: java.util.AbstractList<E>
+15:20:15.519 [Test worker] INFO com.xxxx.cube.utils.ExcelTest - parameterizedType,rawType: class java.util.AbstractList
+15:20:15.535 [Test worker] INFO com.xxxx.cube.utils.ExcelTest - actualTypeArguments0: E
+```
+
+报错原因：
+
+getGenericSuperclass()这个方法是获取当前对象的Class的父类，父类和子类一样带有泛型，但是可以看到这里的泛型变成了E，因为java在运行中将泛型擦除了，这里就是发生后面报错的主要原因。
+ParameterizedType是一个泛型类型。
+getActualTypeArguments()是获取泛型类型中的所有泛型，返回的是一个数组，其实对应的就是java.util.AbstractList<E>中的E。
+取其中的一个泛型强转为Class对象，强转报错，就是因为这里拿到的是泛型已经被擦出了，E时一种类型无法转为Class。
+
+解决办法：
+
+到这里我们已经知道了报错的根本原因，但是如何解决这一问题呢，首先想到的就是如何能获取到对象Class的本身，而不是他的父类。这里其实可以通过这种继承的方式去解决，通过传一个该类的子类来让getGenericSuperclass()获取到子类的父类，也就是我们需要的List<ProductVM>这个类。如何传一个List<ProductVM>的子类需要用到匿名内部类，匿名内部类其实就是父类对子类的一个简写，这里给一个示例仅供参考。
+
+```java
+# 正常写法
+abstract class Person {
+    public abstract void eat();
+}
+ 
+class Child extends Person {
+    public void eat() {
+        System.out.println("eat something");
+    }
+}
+ 
+public class Demo {
+    public static void main(String[] args) {
+        Person p = new Child();
+        p.eat();
+    }
+}
+
+# 匿名内部类写法
+abstract class Person {
+    public abstract void eat();
+}
+ 
+public class Demo {
+    public static void main(String[] args) {
+        Person p = new Person() {
+            public void eat() {
+                System.out.println("eat something");
+            }
+        };
+        p.eat();
+    }
+}
+
+# 总结：new Person(){}其实就是相当于Child这个子类，Child内部的方法可以在{}中实现，需要注意的是匿名内部类只适用于一个方法的类
+```
+
+所以我们在构建List的时候用匿名内部类构建，将List<ProductVM> list = new ArrayList<>()改成List<ProductVM> list = new ArrayList<>() {}，结果就正常输出了，顺便查看一下现在的几个类的打印结果：
+
+```java
+> Task :processTestResources UP-TO-DATE
+> Task :testClasses
+> Task :test
+16:13:57.395 [Test worker] INFO com.xxxx.cube.utils.ExcelTest - 开始测试
+16:13:57.410 [Test worker] INFO com.xxxx.cube.utils.ExcelTest - type: java.util.ArrayList<com.xxxx.cube.excel.ProductVM>
+16:13:57.411 [Test worker] INFO com.xxxx.cube.utils.ExcelTest - parameterizedType: java.util.ArrayList<com.xxxx.cube.excel.ProductVM>
+16:13:57.412 [Test worker] INFO com.xxxx.cube.utils.ExcelTest - parameterizedType,rawType: class java.util.ArrayList
+16:13:57.429 [Test worker] INFO com.xxxx.cube.utils.ExcelTest - actualTypeArguments0: class com.xxxx.cube.excel.ProductVM
+16:13:57.430 [Test worker] INFO com.xxxx.cube.utils.ExcelTest - class: class com.xxxx.cube.excel.ProductVM
+```
+
+总结：通过这个问题再一次复习了泛型以及内部类的作用和原理，也深刻理解到了底层知识的重要性，以不变应万变。
