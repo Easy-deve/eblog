@@ -879,7 +879,7 @@ public class ExcelTest {
 <p>getGenericSuperclass()这个方法是获取当前对象的Class的父类，父类和子类一样带有泛型，但是可以看到这里的泛型变成了E，因为java在运行中将泛型擦除了，这里就是发生后面报错的主要原因。
 ParameterizedType是一个泛型类型。
 getActualTypeArguments()是获取泛型类型中的所有泛型，返回的是一个数组，其实对应的就是java.util.AbstractList<E>中的E。
-取其中的一个泛型强转为Class对象，强转报错，就是因为这里拿到的是泛型已经被擦出了，E时一种类型无法转为Class。</p>
+取其中的一个泛型强转为Class对象，强转报错，就是因为这里拿到的是泛型已经被擦除了，E是一种类型无法转为Class。</p>
 <p>解决办法：</p>
 <p>到这里我们已经知道了报错的根本原因，但是如何解决这一问题呢，首先想到的就是如何能获取到对象Class的本身，而不是他的父类。这里其实可以通过这种继承的方式去解决，通过传一个该类的子类来让getGenericSuperclass()获取到子类的父类，也就是我们需要的List<ProductVM>这个类。如何传一个List<ProductVM>的子类需要用到匿名内部类，匿名内部类其实就是父类对子类的一个简写，这里给一个示例仅供参考。</p>
 <pre><code class="language-java"># 正常写法
@@ -975,5 +975,5 @@ public class Demo {
 
 <!--
 MkDocs version : 1.2.3
-Build Date UTC : 2022-07-05 08:28:32.179556+00:00
+Build Date UTC : 2022-07-05 08:32:34.300386+00:00
 -->
