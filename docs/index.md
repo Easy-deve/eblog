@@ -885,7 +885,7 @@ public class ExcelTest {
 getGenericSuperclass()这个方法是获取当前对象的Class的父类，父类和子类一样带有泛型，但是可以看到这里的泛型变成了E，因为java在运行中将泛型擦除了，这里就是发生后面报错的主要原因。
 ParameterizedType是一个泛型类型。
 getActualTypeArguments()是获取泛型类型中的所有泛型，返回的是一个数组，其实对应的就是java.util.AbstractList<E>中的E。
-取其中的一个泛型强转为Class对象，强转报错，就是因为这里拿到的是泛型已经被擦出了，E时一种类型无法转为Class。
+取其中的一个泛型强转为Class对象，强转报错，就是因为这里拿到的是泛型已经被擦除了，E是一种类型无法转为Class。
 
 解决办法：
 
