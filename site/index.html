@@ -87,6 +87,8 @@
     </li>
     <li class="toctree-l4"><a class="reference internal" href="#spring-logback-additivity">Spring-logback additivity</a>
     </li>
+    <li class="toctree-l4"><a class="reference internal" href="#list">获取List&lt;?&gt;中的泛型</a>
+    </li>
         </ul>
     </li>
         </ul>
@@ -818,6 +820,116 @@ BUILD SUCCESSFUL in 5s
 <p>解决方式：知道了原因以及additivity的原理后，对应的解决方式也就有了，这里一共有两种比较方便的解决方式，方式一是将包的范围缩小，可以指定到对应的类，这样audit的范围变小也就不会再影响到其他的日志信息；方式二是将additivity改为true，这样audit内部的其他日志也会输出到主控制台，但是有一个缺点就是audit中trace级别的日志也会输出到主控制台，相同的日志会出现两份。个人建议使用第一种方式。</p>
 <p>参考文档：</p>
 <p>[https://logback.qos.ch/manual/configuration.html]</p>
+<h4 id="list">获取List&lt;?&gt;中的泛型</h4>
+<p>问题：需要实现一个将业务数据导出成Excel的功能，传参设置为Map&lt;String, List&lt;?&gt;&gt;用来接收不同对象的List数据。获取List中的泛型后将其转为Class对象从而得到内部的属性字段。但是将泛型转为Class时报错。</p>
+<p>报错日志如下：</p>
+<pre><code class="language-java">class sun.reflect.generics.reflectiveObjects.TypeVariableImpl cannot be cast to class java.lang.Class (sun.reflect.generics.reflectiveObjects.TypeVariableImpl and java.lang.Class are in module java.base of loader 'bootstrap')
+java.lang.ClassCastException: class sun.reflect.generics.reflectiveObjects.TypeVariableImpl cannot be cast to class java.lang.Class (sun.reflect.generics.reflectiveObjects.TypeVariableImpl and java.lang.Class are in module java.base of loader 'bootstrap')
+</code></pre>
+<p>模拟业务测试方法：</p>
+<pre><code class="language-java">@Slf4j
+public class ExcelTest {
+  private final Map&lt;String, List&lt;?&gt;&gt; map = new HashMap&lt;&gt;();
+
+  @BeforeEach
+  void init() {
+    List&lt;ProductVM&gt; list = new ArrayList&lt;&gt;();
+    ProductVM productvm = new ProductVM();
+    productvm.setProductNo(&quot;1&quot;);
+    productvm.setProductName(&quot;pinggou&quot;);
+    productvm.setStepName(&quot;moban&quot;);
+    productvm.setStepNo(2);
+    productvm.setStepNum(10);
+    productvm.setProductCreatedBy(&quot;psys&quot;);
+    productvm.setStepTempCreatedBy(&quot;stsys&quot;);
+    list.add(productvm);
+    map.put(&quot;productVM&quot;, list);
+  }
+
+  @Test
+  void testMap() {
+    log.info(&quot;开始测试&quot;);
+    for (final Map.Entry&lt;String, List&lt;?&gt;&gt; map : map.entrySet()) {
+      final List&lt;?&gt; list = map.getValue();
+      final Type type = list.getClass().getGenericSuperclass();
+      log.info(&quot;type: &quot; + type);
+      final ParameterizedType p = (ParameterizedType) type;
+      log.info(&quot;parameterizedType: &quot; + p);
+      log.info(&quot;parameterizedType,rawType: &quot; + p.getRawType());
+      for (int i = 0; i &lt; p.getActualTypeArguments().length; i++) {
+        log.info(&quot;actualTypeArguments&quot; + i + &quot;: &quot; + p.getActualTypeArguments()[i]);
+      }
+      final Class cls = (Class) p.getActualTypeArguments()[0];
+      log.info(&quot;class: &quot; + cls);
+    }
+  }
+}
+</code></pre>
+<p>通过打印关键类的名称查找报错原因：</p>
+<pre><code class="language-java">&gt; Task :processTestResources UP-TO-DATE
+&gt; Task :testClasses
+&gt; Task :test
+15:20:15.478 [Test worker] INFO com.xxxx.cube.utils.ExcelTest - 开始测试
+15:20:15.517 [Test worker] INFO com.xxxx.cube.utils.ExcelTest - type: java.util.AbstractList&lt;E&gt;
+15:20:15.519 [Test worker] INFO com.xxxx.cube.utils.ExcelTest - parameterizedType: java.util.AbstractList&lt;E&gt;
+15:20:15.519 [Test worker] INFO com.xxxx.cube.utils.ExcelTest - parameterizedType,rawType: class java.util.AbstractList
+15:20:15.535 [Test worker] INFO com.xxxx.cube.utils.ExcelTest - actualTypeArguments0: E
+</code></pre>
+<p>报错原因：</p>
+<p>getGenericSuperclass()这个方法是获取当前对象的Class的父类，父类和子类一样带有泛型，但是可以看到这里的泛型变成了E，因为java在运行中将泛型擦除了，这里就是发生后面报错的主要原因。
+ParameterizedType是一个泛型类型。
+getActualTypeArguments()是获取泛型类型中的所有泛型，返回的是一个数组，其实对应的就是java.util.AbstractList<E>中的E。
+取其中的一个泛型强转为Class对象，强转报错，就是因为这里拿到的是泛型已经被擦出了，E时一种类型无法转为Class。</p>
+<p>解决办法：</p>
+<p>到这里我们已经知道了报错的根本原因，但是如何解决这一问题呢，首先想到的就是如何能获取到对象Class的本身，而不是他的父类。这里其实可以通过这种继承的方式去解决，通过传一个该类的子类来让getGenericSuperclass()获取到子类的父类，也就是我们需要的List<ProductVM>这个类。如何传一个List<ProductVM>的子类需要用到匿名内部类，匿名内部类其实就是父类对子类的一个简写，这里给一个示例仅供参考。</p>
+<pre><code class="language-java"># 正常写法
+abstract class Person {
+    public abstract void eat();
+}
+
+class Child extends Person {
+    public void eat() {
+        System.out.println(&quot;eat something&quot;);
+    }
+}
+
+public class Demo {
+    public static void main(String[] args) {
+        Person p = new Child();
+        p.eat();
+    }
+}
+
+# 匿名内部类写法
+abstract class Person {
+    public abstract void eat();
+}
+
+public class Demo {
+    public static void main(String[] args) {
+        Person p = new Person() {
+            public void eat() {
+                System.out.println(&quot;eat something&quot;);
+            }
+        };
+        p.eat();
+    }
+}
+
+# 总结：new Person(){}其实就是相当于Child这个子类，Child内部的方法可以在{}中实现，需要注意的是匿名内部类只适用于一个方法的类
+</code></pre>
+<p>所以我们在构建List的时候用匿名内部类构建，将List<ProductVM> list = new ArrayList&lt;&gt;()改成List<ProductVM> list = new ArrayList&lt;&gt;() {}，结果就正常输出了，顺便查看一下现在的几个类的打印结果：</p>
+<pre><code class="language-java">&gt; Task :processTestResources UP-TO-DATE
+&gt; Task :testClasses
+&gt; Task :test
+16:13:57.395 [Test worker] INFO com.xxxx.cube.utils.ExcelTest - 开始测试
+16:13:57.410 [Test worker] INFO com.xxxx.cube.utils.ExcelTest - type: java.util.ArrayList&lt;com.xxxx.cube.excel.ProductVM&gt;
+16:13:57.411 [Test worker] INFO com.xxxx.cube.utils.ExcelTest - parameterizedType: java.util.ArrayList&lt;com.xxxx.cube.excel.ProductVM&gt;
+16:13:57.412 [Test worker] INFO com.xxxx.cube.utils.ExcelTest - parameterizedType,rawType: class java.util.ArrayList
+16:13:57.429 [Test worker] INFO com.xxxx.cube.utils.ExcelTest - actualTypeArguments0: class com.xxxx.cube.excel.ProductVM
+16:13:57.430 [Test worker] INFO com.xxxx.cube.utils.ExcelTest - class: class com.xxxx.cube.excel.ProductVM
+</code></pre>
+<p>总结：通过这个问题再一次复习了泛型以及内部类的作用和原理，也深刻理解到了底层知识的重要性，以不变应万变。</p>
               
             </div>
           </div>
@@ -863,5 +975,5 @@ BUILD SUCCESSFUL in 5s
 
 <!--
 MkDocs version : 1.2.3
-Build Date UTC : 2022-06-28 04:53:11.141364+00:00
+Build Date UTC : 2022-07-05 08:28:32.179556+00:00
 -->
