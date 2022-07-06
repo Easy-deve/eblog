@@ -364,15 +364,15 @@ class TraceBatchesServiceImplTest extends BaseServiceTest {
 
 
 
-#### DAO
+#### Mapper
 
-DAO的测试有多种方式，目前比较常用的有spring test集成h2以及spring test集成testcontainer，下面主要介绍一下这两种方式。
+Mapper的测试有多种方式，目前比较常用的有spring test集成h2以及spring test集成testcontainer，下面主要介绍一下这两种方式。
 
 H2：h2的优点就是启动方式简单，速度快；缺点就是h2的部分语法和mysql不兼容，同时会在系统中存在两份初始化sql脚本，会导致两边修改不一致；
 
 Testcontainer：优点是使用docker启动一个mysql实例，初始化脚步可以和系统的是同一份，保证了环境的一致性；缺点是开发者本地需要安装docker，并且CI中要使用docker in docker的模式，启动也比较复杂。
 
-DAO中使用到的关键注解有：
+Mapper中使用到的关键注解有：
 
 * @Testcontainers
 * @SpringBootTest
@@ -384,6 +384,58 @@ DAO中使用到的关键注解有：
 @Testcontainers 主要是用作测试中自动启动、停止容器的。测试容器会找到所有用Container标注的字段，并在容器的生命周期内调用它们的方法。**注：声明为静态字段的容器将在测试方法之间共享，它们只会在任何测试方法执行之前启动一次，并在最后一个测试方法执行之后停止。声明为实例字段的容器将为每个测试方法启动和停止**。
 @Container 注释与Testcontainers注释一起使用，以标记容器由testcontainer去管理。
 @DynamicPropertySource 用于集成测试的方法级注释，这些测试需要将具有动态值的属性添加到环境的PropertySource中。
+
+
+
+#### Other
+
+##### 私有方法测试
+
+我们先定义一个类，这个类中有一个公有方法和一个私有方法，类定义如下：
+
+```java
+public class Demo {
+  public void publicMethod() {
+  }
+  
+  private String privateMethod() {
+    return "This is a private method."
+  }
+}
+```
+
+1. 使用反射
+
+​	然后我们使用反射来测试这个类的私有方法
+
+```java
+public class DemoTest throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+  @Test
+  void testPrivateMethod() {
+    Demo demo = new Demo();
+    Method privateMethod = demo.getClass().getDeclaredMethod("privateMethod");
+    privateMethod.setAccessible(true);
+    Assertions.assertEquals("This is a private method.", privateMethod.invoke(demo));
+  }
+}
+```
+
+2. 使用Spring的工具类
+
+```java
+public class DemoTest {
+  @Test
+  void testPrivateMethod() {
+    Demo demo = new Demo();
+    
+    // invokeMethod的第三个参数是一个数组，代表方法的传参
+    Assertions.assertEquals("This is a private method.", ReflectionTestUtils
+        .invokeMethod(demo, "privateMethod", null););
+  }
+}
+```
+
+
 
 #### Reference
 
