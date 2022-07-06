@@ -57,7 +57,9 @@
     </li>
     <li class="toctree-l4"><a class="reference internal" href="#service">Service</a>
     </li>
-    <li class="toctree-l4"><a class="reference internal" href="#dao">DAO</a>
+    <li class="toctree-l4"><a class="reference internal" href="#mapper">Mapper</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#other">Other</a>
     </li>
     <li class="toctree-l4"><a class="reference internal" href="#reference">Reference</a>
     </li>
@@ -71,7 +73,7 @@
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#_3">问题记录</a>
+    <li class="toctree-l2"><a class="reference internal" href="#_4">问题记录</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#cicd">CI/CD</a>
         <ul>
@@ -79,7 +81,7 @@
     </li>
         </ul>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#_4">其他</a>
+    <li class="toctree-l3"><a class="reference internal" href="#_5">其他</a>
         <ul>
     <li class="toctree-l4"><a class="reference internal" href="#mybatis-plus-in-condition">mybatis-plus in condition</a>
     </li>
@@ -455,11 +457,11 @@ class TraceBatchesServiceImplTest extends BaseServiceTest {
 
 }
 </code></pre>
-<h4 id="dao">DAO</h4>
-<p>DAO的测试有多种方式，目前比较常用的有spring test集成h2以及spring test集成testcontainer，下面主要介绍一下这两种方式。</p>
+<h4 id="mapper">Mapper</h4>
+<p>Mapper的测试有多种方式，目前比较常用的有spring test集成h2以及spring test集成testcontainer，下面主要介绍一下这两种方式。</p>
 <p>H2：h2的优点就是启动方式简单，速度快；缺点就是h2的部分语法和mysql不兼容，同时会在系统中存在两份初始化sql脚本，会导致两边修改不一致；</p>
 <p>Testcontainer：优点是使用docker启动一个mysql实例，初始化脚步可以和系统的是同一份，保证了环境的一致性；缺点是开发者本地需要安装docker，并且CI中要使用docker in docker的模式，启动也比较复杂。</p>
-<p>DAO中使用到的关键注解有：</p>
+<p>Mapper中使用到的关键注解有：</p>
 <ul>
 <li>@Testcontainers</li>
 <li>@SpringBootTest</li>
@@ -471,6 +473,46 @@ class TraceBatchesServiceImplTest extends BaseServiceTest {
 <p>@Testcontainers 主要是用作测试中自动启动、停止容器的。测试容器会找到所有用Container标注的字段，并在容器的生命周期内调用它们的方法。<strong>注：声明为静态字段的容器将在测试方法之间共享，它们只会在任何测试方法执行之前启动一次，并在最后一个测试方法执行之后停止。声明为实例字段的容器将为每个测试方法启动和停止</strong>。
 @Container 注释与Testcontainers注释一起使用，以标记容器由testcontainer去管理。
 @DynamicPropertySource 用于集成测试的方法级注释，这些测试需要将具有动态值的属性添加到环境的PropertySource中。</p>
+<h4 id="other">Other</h4>
+<h5 id="_3">私有方法测试</h5>
+<p>我们先定义一个类，这个类中有一个公有方法和一个私有方法，类定义如下：</p>
+<pre><code class="language-java">public class Demo {
+  public void publicMethod() {
+  }
+
+  private String privateMethod() {
+    return &quot;This is a private method.&quot;
+  }
+}
+</code></pre>
+<ol>
+<li>使用反射</li>
+</ol>
+<p>​   然后我们使用反射来测试这个类的私有方法</p>
+<pre><code class="language-java">public class DemoTest throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+  @Test
+  void testPrivateMethod() {
+    Demo demo = new Demo();
+    Method privateMethod = demo.getClass().getDeclaredMethod(&quot;privateMethod&quot;);
+    privateMethod.setAccessible(true);
+    Assertions.assertEquals(&quot;This is a private method.&quot;, privateMethod.invoke(demo));
+  }
+}
+</code></pre>
+<ol>
+<li>使用Spring的工具类</li>
+</ol>
+<pre><code class="language-java">public class DemoTest {
+  @Test
+  void testPrivateMethod() {
+    Demo demo = new Demo();
+
+    // invokeMethod的第三个参数是一个数组，代表方法的传参
+    Assertions.assertEquals(&quot;This is a private method.&quot;, ReflectionTestUtils
+        .invokeMethod(demo, &quot;privateMethod&quot;, null););
+  }
+}
+</code></pre>
 <h4 id="reference">Reference</h4>
 <p>[https://doczhcn.gitbook.io/junit5/index/index-2/annotations] (Junit 5官方文档中文版)</p>
 <p>[https://javadoc.io/doc/org.mockito/mockito-core/latest/org/mockito/Mockito.html] (Mockito 官方文档)</p>
@@ -485,7 +527,7 @@ class TraceBatchesServiceImplTest extends BaseServiceTest {
 <h3 id="docker">Docker</h3>
 <p><img src="img/docker-img.png" alt="Screenshot" style="zoom:50%;" /></p>
 <h3 id="k8s">K8S</h3>
-<h2 id="_3">问题记录</h2>
+<h2 id="_4">问题记录</h2>
 <h3 id="cicd">CI/CD</h3>
 <h4 id="dinddocker-in-docker">DIND（docker in docker）</h4>
 <p>描述：编写集成测试，需要用到spicedb，通过代码的dockertest启动一个docker spicedb容器，通过grpc连接spicedb容器向其中添加数据做测试，gitlab-ci的test报错历史</p>
@@ -680,7 +722,7 @@ test-coverage: # This job runs in the test stage.
 #    - echo &quot;Deploying application on prod...&quot;
 #    - echo &quot;Application successfully deployed.&quot;
 </code></pre>
-<h3 id="_4">其他</h3>
+<h3 id="_5">其他</h3>
 <h4 id="mybatis-plus-in-condition">mybatis-plus in condition</h4>
 <p>问题描述：在mybatis-plus中使用in条件过滤数据，发现in条件失效</p>
 <p>编码及日志：queryWrapper.in("id", queryResult.getList().isEmpty() ? "" : queryResult.getList());</p>
@@ -975,5 +1017,5 @@ public class Demo {
 
 <!--
 MkDocs version : 1.2.3
-Build Date UTC : 2022-07-05 08:32:34.300386+00:00
+Build Date UTC : 2022-07-06 09:48:51.904501+00:00
 -->
