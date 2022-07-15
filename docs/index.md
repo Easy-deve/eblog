@@ -389,7 +389,7 @@ Mapper中使用到的关键注解有：
 
 #### Other
 
-##### 私有方法测试
+##### 测试私有方法
 
 我们先定义一个类，这个类中有一个公有方法和一个私有方法，类定义如下：
 
@@ -434,6 +434,86 @@ public class DemoTest {
   }
 }
 ```
+
+
+
+##### Mock静态方法
+
+定义类和相应的静态方法
+
+```java
+public class Demo() {
+  public static String getStaticMethodString(String input) {
+    return "This is your input: " + input;
+  }
+}
+```
+
+首先简单介绍一下几个模拟类的框架：
+
+1) mockito是一个比较通用的模拟框架，使用比较广泛。mockito是通过cglib来构建一个被测试类的子类，从而去mock被测试类的方法。 如果类、方法等是final类型的或者是静态方法，由于这样的父类没发继承、静态方法无法从写导致mockito将无法做mock。
+2) powermock是mockito的一个加强版，他在mockito的基础上扩展了对final、static修饰的类或对象的mock，但只能在junit4的框架下使用。
+
+所以使用powermock来mock静态方法，先通过Gradle引入powermock的依赖
+
+```java
+testImplementation 'org.powermock:powermock-module-junit4:2.0.9'
+testImplementation 'org.powermock:powermock-api-mockito2:2.0.9'
+```
+
+如果想junit4和junit5一起使用，需要加入一下依赖
+
+```java
+testImplementation 'junit:junit:4.13.1'
+testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+testRuntimeOnly 'org.junit.vintage:junit-vintage-engine:5.7.0'
+// 下面是mockito的依赖
+testCompileOnly 'org.mockito:mockito-junit-jupiter:2.19.0'
+testCompileOnly 'org.mockito:mockito-core:2.19.0'
+```
+
+powermock来mock静态方法：
+
+```java
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.runner.RunWith;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
+
+/**
+ * test class static methods using PowerMock under junit4 framework.
+ */
+@RunWith(PowerMockRunner.class)
+@PrepareForTest(Demo.class)
+public class DemoTest {
+
+  @Before
+  public void setup() {
+    PowerMockito.mockStatic(Demo.class);
+  }
+
+  @Test
+  public void testStaticMethod() {
+    final String input = "msg test";
+    final String output = "This is your input: msg test";
+    PowerMockito.when(Demo.getStaticMethodString(input)).thenReturn(output);
+    String res = Demo.getStaticMethodString(input);
+    Assertions.assertEquals(output, res);
+  }
+
+}
+```
+
+注意：
+
+1. @RunWith(PowerMockRunner.class)和@PrepareForTest(Demo.class)是必须要加的，且PrepareForTest内部的类是要对应包含静态方法的类；
+2. 在使用mock前必须要先mock整个类，比如：PowerMockito.mockStatic(Demo.class)；
+3. 测试类的框架必须是junit4，junit5不兼容powermock测试会报错；
+4. junit4的@Test使用的是import org.junit.Test这个包，junit5的@Test使用的是import org.junit.jupiter.api.Test这个包。
 
 
 
