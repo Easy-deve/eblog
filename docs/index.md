@@ -454,14 +454,14 @@ public class Demo() {
 1) mockito是一个比较通用的模拟框架，使用比较广泛。mockito是通过cglib来构建一个被测试类的子类，从而去mock被测试类的方法。 如果类、方法等是final类型的或者是静态方法，由于这样的父类没发继承、静态方法无法从写导致mockito将无法做mock。
 2) powermock是mockito的一个加强版，他在mockito的基础上扩展了对final、static修饰的类或对象的mock，但只能在junit4的框架下使用。
 
-所以使用powermock来mock静态方法，先通过Gradle引入powermock的依赖
+所以使用powermock来mock静态方法，先通过Gradle引入powermock的依赖：
 
 ```java
 testImplementation 'org.powermock:powermock-module-junit4:2.0.9'
 testImplementation 'org.powermock:powermock-api-mockito2:2.0.9'
 ```
 
-如果想junit4和junit5一起使用，需要加入一下依赖
+如果想junit4和junit5一起使用，需要加入以下依赖：
 
 ```java
 testImplementation 'junit:junit:4.13.1'
