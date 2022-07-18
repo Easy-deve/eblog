@@ -576,6 +576,39 @@ public class DemoTest {
 <li>测试类的框架必须是junit4，junit5不兼容powermock测试会报错；</li>
 <li>junit4的@Test使用的是import org.junit.Test这个包，junit5的@Test使用的是import org.junit.jupiter.api.Test这个包。</li>
 </ol>
+<h5 id="mock_1">Mock私有字段</h5>
+<p>通过spring的<em>org.springframework.test.util.ReflectionTestUtils</em>工具类来mock私有字段，该工具测试方便快捷。</p>
+<p>类示例：</p>
+<pre><code class="language-java">public class Demo {
+  @Value(&quot;${config.app.name}&quot;)
+  private String fieldName;
+
+  public String methodName() {
+    return fieldName + &quot;test&quot;;
+  }
+}
+</code></pre>
+<p>测试示例：</p>
+<pre><code class="language-java">@RunWith(PowerMockRunner.class)
+@PrepareForTest(Demo.class)
+public class DemoTest {
+
+  @InjectMocks
+  private Demo demo;
+
+  @Before
+  public void setup() {}
+
+  @Test
+  public void testMethod() {
+    // demo对应的是被测试类的对象，“fieldName”是类中字段的名称，a表示字段mock的值
+    ReflectionTestUtils.setField(demo, &quot;fieldName&quot;, &quot;a&quot;);
+    Assertions.assertEquals(&quot;a test&quot;, demo.methodName());
+  }
+
+}
+</code></pre>
+<p>就像上面这种类的私有字段，可能是从配置文件中获取的环境变量；当我们在测试的时候给他设定一个初始值时由于字段是私有的无法获取，这是情况我们就可以使用ReflectionTestUtils来给字段设定初值，其实底层原理也是通过反射获取字段，再去动态的修改字段的内容。</p>
 <h4 id="reference">Reference</h4>
 <p>[https://doczhcn.gitbook.io/junit5/index/index-2/annotations] (Junit 5官方文档中文版)</p>
 <p>[https://javadoc.io/doc/org.mockito/mockito-core/latest/org/mockito/Mockito.html] (Mockito 官方文档)</p>
@@ -1080,5 +1113,5 @@ public class Demo {
 
 <!--
 MkDocs version : 1.2.3
-Build Date UTC : 2022-07-15 10:20:18.363557+00:00
+Build Date UTC : 2022-07-18 07:43:33.710006+00:00
 -->
