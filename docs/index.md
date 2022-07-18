@@ -517,6 +517,50 @@ public class DemoTest {
 
 
 
+##### Mock私有字段
+
+通过spring的*org.springframework.test.util.ReflectionTestUtils*工具类来mock私有字段，该工具测试方便快捷。
+
+类示例：
+
+```java
+public class Demo {
+  @Value("${config.app.name}")
+  private String fieldName;
+  
+  public String methodName() {
+    return fieldName + "test";
+  }
+}
+```
+
+测试示例：
+
+```java
+@RunWith(PowerMockRunner.class)
+@PrepareForTest(Demo.class)
+public class DemoTest {
+  
+  @InjectMocks
+  private Demo demo;
+
+  @Before
+  public void setup() {}
+
+  @Test
+  public void testMethod() {
+    // demo对应的是被测试类的对象，“fieldName”是类中字段的名称，a表示字段mock的值
+    ReflectionTestUtils.setField(demo, "fieldName", "a");
+    Assertions.assertEquals("a test", demo.methodName());
+  }
+
+}
+```
+
+就像上面这种类的私有字段，可能是从配置文件中获取的环境变量；当我们在测试的时候给他设定一个初始值时由于字段是私有的无法获取，这是情况我们就可以使用ReflectionTestUtils来给字段设定初值，其实底层原理也是通过反射获取字段，再去动态的修改字段的内容。
+
+
+
 #### Reference
 
 [https://doczhcn.gitbook.io/junit5/index/index-2/annotations] (Junit 5官方文档中文版)
