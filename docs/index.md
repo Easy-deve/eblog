@@ -366,11 +366,11 @@ class TraceBatchesServiceImplTest extends BaseServiceTest {
 
 #### Mapper
 
-Mapper的测试有多种方式，目前比较常用的有spring test集成h2以及spring test集成testcontainer，下面主要介绍一下这两种方式。
+Mapper的测试有多种方式，目前比较常用的有spring test集成h2以及spring test集成testcontainer，由于h2配置简单，下面主要介绍一下testcontainer这种方式。
 
 H2：h2的优点就是启动方式简单，速度快；缺点就是h2的部分语法和mysql不兼容，同时会在系统中存在两份初始化sql脚本，会导致两边修改不一致；
 
-Testcontainer：优点是使用docker启动一个mysql实例，初始化脚步可以和系统的是同一份，保证了环境的一致性；缺点是开发者本地需要安装docker，并且CI中要使用docker in docker的模式，启动也比较复杂。
+Testcontainer：优点是使用docker启动一个mysql实例，初始化数据库脚本可以和系统的是同一份，保证了环境的一致性；缺点是开发者本地需要安装docker，并且CI中要使用docker in docker的模式，启动也比较复杂。
 
 Mapper中使用到的关键注解有：
 
@@ -378,12 +378,181 @@ Mapper中使用到的关键注解有：
 * @SpringBootTest
 * @Container
 * @DynamicPropertySource
+* @DirtiesContext
 * @BeforeEach
 * @AfterEach
 
-@Testcontainers 主要是用作测试中自动启动、停止容器的。测试容器会找到所有用Container标注的字段，并在容器的生命周期内调用它们的方法。**注：声明为静态字段的容器将在测试方法之间共享，它们只会在任何测试方法执行之前启动一次，并在最后一个测试方法执行之后停止。声明为实例字段的容器将为每个测试方法启动和停止**。
-@Container 注释与Testcontainers注释一起使用，以标记容器由testcontainer去管理。
-@DynamicPropertySource 用于集成测试的方法级注释，这些测试需要将具有动态值的属性添加到环境的PropertySource中。
+> @Testcontainers
+
+​	@Testcontainers 主要是用作测试中自动启动、停止容器的。测试容器会找到所有用Container标注的字段，并在容器的生命周期内调用它们的方法。**注：声明为静态字段的容器将在测试方法之间共享，它们只会在任何测试方法执行之前启动一次，并在最后一个测试方法执行之后停止。声明为实例字段的容器将为每个测试方法启动和停止**。
+
+> @Container
+
+​	@Container 注释与Testcontainers注释一起使用，以标记容器由testcontainer去管理。
+
+> @DynamicPropertySource
+
+​	@DynamicPropertySource 用于集成测试的方法级注释，这些测试需要将具有动态值的属性添加到环境的PropertySource中。
+
+> @DirtiesContext
+
+​	@DirtiesContext 主要是用于清除Spring中ApplicationContext的上下文缓存信息的，一般是和@DynamicPropertySource联合使用，使Spring的Bean每次使用修改后的环境变量。如果在测试类上，使用@DirtiesContext注解，待整个测试类的所有测试执行结束后，该测试的ApplicationContext会被关闭，同时缓存会清除。
+
+**Mapper层逻辑**
+
+```java
+@Mapper
+public interface TraceBatchesMapper extends MPJBaseMapper<TraceBatches> {
+  @Select("select id batchId, batch_no batchNo from trace_batches "
+      + " where product_id=#{productId} and deleted=0 ")
+  List<MarkTraceBatchSelectorDTO> selectByProductId(int productId);
+}
+```
+
+**Mapper Test层逻辑**
+
+```java
+/**
+ * TraceBatchesMapperTest unit test.
+ */
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+class TraceBatchesMapperTest extends BaseMapperTest {
+  private static final String BATCH_NO = "BN00001";
+  private static final int PRODUCT_ID = 1;
+  private static final int STEP_TEMP_ID = 1;
+
+  @Autowired
+  private TraceBatchesMapper traceBatchesMapper;
+
+  @BeforeEach
+  void init() {
+    final TraceBatches traceBatches = generateTraceBatches();
+    traceBatchesMapper.insert(traceBatches);
+  }
+  
+  @Test
+  void testSelectByProductId() {
+    final List<String> expected = expectedResponse();
+    final List<MarkTraceBatchSelectorDTO> selectorDtoS =
+        traceBatchesMapper.selectByProductId(PRODUCT_ID);
+    final List<String> list = selectorDtoS.stream()
+        .map(MarkTraceBatchSelectorDTO::getBatchNo).toList();
+    Assertions.assertArrayEquals(expected.toArray(), list.toArray(), "test list equal");
+  }
+
+  @AfterEach
+  void clean() {
+    traceBatchesMapper.deleteById(PRODUCT_ID);
+  }
+  
+  private TraceBatches generateTraceBatches() {
+    final TraceBatches traceBatches = new TraceBatches();
+    traceBatches.setProductId(PRODUCT_ID);
+    traceBatches.setProductNum(10L);
+    traceBatches.setStepTempId(1);
+    traceBatches.setNote("test");
+    traceBatches.setUpdateBy("system");
+    traceBatches.setCreatedBy("system");
+    traceBatches.setCreatedTime(DateTimeUtil.nowOfUTF8());
+    traceBatches.setUpdateTime(traceBatches.getCreatedTime());
+    traceBatches.setBatchNo(BATCH_NO);
+    traceBatches.setStatus(com.zhigui.cube.utils.Constants.PENDING);
+    traceBatches.setDeleted(com.zhigui.cube.utils.Constants.NOT_DISABLE);
+    traceBatches.setAppId("test");
+    traceBatches.setExtension(UUID.randomUUID().toString().replace("-", ""));
+    traceBatches.setClosed(UUID.randomUUID().toString().replace("-", ""));
+    return traceBatches;
+  }
+
+  private List<String> expectedResponse() {
+    final List<String> list = new ArrayList<>();
+    list.add(BATCH_NO);
+    return list;
+  }
+}
+```
+
+**BaseMapperTest 逻辑**
+
+​		容器启动之后会去默认的目录初始化sql文件，一般我们可以把sql文件放到默认的resource下面，但是一般的初始化数据库脚步不会放到test下的resource下，这样就没发统一去维护。启动容器之前我们可以通过withFileSystemBind将脚本文件映射到容器的默认目录下，这样就可以实现维护和真实数据库同一份的脚本。
+
+```java
+import java.io.IOException;
+import java.nio.file.Paths;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.MySQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
+/**
+ * base mapper test for enable Testcontainers annotations
+ * to manage docker container.
+ */
+@Slf4j
+@Testcontainers
+@DirtiesContext
+public class BaseMapperTest {
+
+  /**
+   * The @Container annotation tells JUnit to notify this field
+   * about various events in the test lifecycle.
+   */
+  @Container
+  @SuppressWarnings("PMD.FieldNamingConventions")
+  private static MySQLContainer<?> mysqlContainer;
+
+  static {
+    try {
+      mysqlContainer = new MySQLContainer<>(DockerImageName.parse(Constants.MYSQL_IMAGE_NAME))
+          .withUsername(Constants.MYSQL_USER_NAME)
+          .withPassword(Constants.MYSQL_PASSWORD)
+          .withDatabaseName(Constants.MYSQL_DATABASE_NAME)
+          // 脚本文件路径直接挂在到镜像的指定目录，mysql container会在启动时自动加载此目录中的脚本文件
+          .withFileSystemBind(Paths.get("./doc/db/cube.sql").toRealPath().toString(),
+              "/docker-entrypoint-initdb.d/1-cube.sql")
+          .withFileSystemBind(Paths.get("./doc/db/user.sql").toRealPath().toString(),
+              "/docker-entrypoint-initdb.d/2-user.sql")
+          .withFileSystemBind(Paths.get("./src/test/resources/sql/data.sql")
+                  .toRealPath().toString(),
+              "/docker-entrypoint-initdb.d/3-data.sql")
+          .withCommand("--character-set-server=utf8 --collation-server=utf8_unicode_ci");
+    } catch (IOException e) {
+      log.error("create test container failed");
+    }
+  }
+
+  @DynamicPropertySource
+  static void mysqlProperties(final DynamicPropertyRegistry registry) {
+    registry.add("spring.datasource.url", mysqlContainer::getJdbcUrl);
+    registry.add("spring.datasource.password", mysqlContainer::getPassword);
+    registry.add("spring.datasource.username", mysqlContainer::getUsername);
+  }
+
+}
+```
+
+**H2配置**
+
+如果想使用h2的方法，可以在spring的配置文件yaml中修改数据库连接信息，具体实例如下：
+
+```yaml
+# DataSource Config
+spring:
+  datasource:
+    driver-class-name: org.h2.Driver
+    schema: classpath:db/schema-h2.sql
+    data: classpath:db/data-h2.sql
+    url: jdbc:h2:mem:test
+    username: root
+    password: test
+  h2:
+    console:
+      enabled: true
+```
+
+schema是数据库初始化表结构的脚步文件，data是数据库初始化数据的脚本文件，后续的测试逻辑和前面的基本类似，mybatis会通过配置文件的数据库信息连接h2数据库做相应的操作。
 
 
 
