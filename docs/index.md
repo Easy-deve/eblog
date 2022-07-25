@@ -384,19 +384,19 @@ Mapper中使用到的关键注解有：
 
 > @Testcontainers
 
-​	@Testcontainers 主要是用作测试中自动启动、停止容器的。测试容器会找到所有用Container标注的字段，并在容器的生命周期内调用它们的方法。**注：声明为静态字段的容器将在测试方法之间共享，它们只会在任何测试方法执行之前启动一次，并在最后一个测试方法执行之后停止。声明为实例字段的容器将为每个测试方法启动和停止**。
+主要是用作测试中自动启动、停止容器的。测试容器会找到所有用Container标注的字段，并在容器的生命周期内调用它们的方法。**注：声明为静态字段的容器将在测试方法之间共享，它们只会在任何测试方法执行之前启动一次，并在最后一个测试方法执行之后停止。声明为实例字段的容器将为每个测试方法启动和停止**。
 
 > @Container
 
-​	@Container 注释与Testcontainers注释一起使用，以标记容器由testcontainer去管理。
+与Testcontainers注释一起使用，以标记容器由testcontainer去管理。
 
 > @DynamicPropertySource
 
-​	@DynamicPropertySource 用于集成测试的方法级注释，这些测试需要将具有动态值的属性添加到环境的PropertySource中。
+用于集成测试的方法级注释，这些测试需要将具有动态值的属性添加到环境的PropertySource中。
 
 > @DirtiesContext
 
-​	@DirtiesContext 主要是用于清除Spring中ApplicationContext的上下文缓存信息的，一般是和@DynamicPropertySource联合使用，使Spring的Bean每次使用修改后的环境变量。如果在测试类上，使用@DirtiesContext注解，待整个测试类的所有测试执行结束后，该测试的ApplicationContext会被关闭，同时缓存会清除。
+主要是用于清除Spring中ApplicationContext的上下文缓存信息的，一般是和@DynamicPropertySource联合使用，使Spring的Bean每次使用修改后的环境变量。如果在测试类上，使用@DirtiesContext注解，待整个测试类的所有测试执行结束后，该测试的ApplicationContext会被关闭，同时缓存会清除。
 
 **Mapper层逻辑**
 
