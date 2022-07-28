@@ -758,6 +758,19 @@ public class DemoTest {
 
 ### K8S
 
+### Spring
+
+#### SpringMVC
+
+SpringMVC流转图：
+
+![springMVC](img/springMVC.png)
+
+过滤器和拦截器实现原理：
+
+1. 过滤器（Filter）是基于函数回调
+2. 拦截器（Intercepter）是基于Java的反射
+
 ## 问题记录
 
 ### CI/CD
