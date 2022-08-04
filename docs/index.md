@@ -937,7 +937,9 @@ protected ModelAndView processHandlerException(HttpServletRequest request, HttpS
 	}
 ```
 
-这里会对`handlerExceptionResolvers`列表进行遍历，如果第一个解析器的`resolveException`方法返回不为null，后续的解析器都不会再执行，SpringMVC默认的几个解析器返回都不为空，所以我们必须将自定义的解析器顺序排在第一个，而且返回的值必须为空为了让后续的解析器还回执行。
+这里会对`handlerExceptionResolvers`列表进行遍历，如果第一个解析器的`resolveException`方法返回不为null，后续的解析器都不会再执行，SpringMVC默认的几个解析器返回都不为空，所以我们必须将自定义的解析器顺序排在第一个，而且返回的值必须为空，让后续的解析器还会执行。
+
+
 
 ## 问题记录
 

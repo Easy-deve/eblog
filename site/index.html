@@ -915,7 +915,7 @@ public class GlobalHandlerExceptionResolver implements HandlerExceptionResolver 
         throw ex;
     }
 </code></pre>
-<p>这里会对<code>handlerExceptionResolvers</code>列表进行遍历，如果第一个解析器的<code>resolveException</code>方法返回不为null，后续的解析器都不会再执行，SpringMVC默认的几个解析器返回都不为空，所以我们必须将自定义的解析器顺序排在第一个，而且返回的值必须为空为了让后续的解析器还回执行。</p>
+<p>这里会对<code>handlerExceptionResolvers</code>列表进行遍历，如果第一个解析器的<code>resolveException</code>方法返回不为null，后续的解析器都不会再执行，SpringMVC默认的几个解析器返回都不为空，所以我们必须将自定义的解析器顺序排在第一个，而且返回的值必须为空，让后续的解析器还会执行。</p>
 <h2 id="_4">问题记录</h2>
 <h3 id="cicd">CI/CD</h3>
 <h4 id="dinddocker-in-docker">DIND（docker in docker）</h4>
@@ -1403,5 +1403,5 @@ public class Demo {
 
 <!--
 MkDocs version : 1.3.1
-Build Date UTC : 2022-08-04 10:31:52.845620+00:00
+Build Date UTC : 2022-08-04 10:35:03.527545+00:00
 -->
