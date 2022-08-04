@@ -771,6 +771,174 @@ SpringMVC流转图：
 1. 过滤器（Filter）是基于函数回调
 2. 拦截器（Intercepter）是基于Java的反射
 
+
+
+##### HandlerExceptionResolver
+
+背景介绍：为了对接ELK实现多个独立服务审计日志的统一存储查询，独立服务需要将要统计的审计日志存储到共享空间，供ELK后续的采集存储。服务端日志统计的解决方案是通过拦截器统一收集每次接口访问的信息，通过Springboot自带logback框架将信息打印成特定格式日志存储到特定目录。由于审计日志需要统计接口访问成功或失败的状态，因此使用了拦截器中的`afterCompletion`方法，该方法是在Spring模版渲染之后执行，一是无论结果成功失败都会执行该方法，二是此时可以获取到返回的状态。**由于审计日志还要统计失败后的异常信息，但是`afterCompletion`方法中的参数ex获取不到异常（后面会介绍为什么ex拿不到异常对象），只能转换思路使用`HandlerExceptionResolver`来获取异常信息。**
+
+`HandlerExceptionResolver`获取异常实现
+
+```java
+// 定义一个全局处理异常解析器，实现默认的异常解析器，后续在DispatcherSevlet中会执行定义好的解析器
+public class GlobalHandlerExceptionResolver implements HandlerExceptionResolver {
+  @Override
+  public ModelAndView resolveException(final HttpServletRequest request,
+                                       final HttpServletResponse response,
+                                       final Object handler, final Exception ex) {
+    // 将异常信息放入审计日志的ThreadLocal中，方便后面在拦截器中取出构建审计日志
+    LogContext.setCtx(Constants.AUDIT_EXCEPTION, ex.getMessage());
+    // 返回null，SpringMVC还会继续执行后续操作
+    return null;
+  }
+}
+```
+
+SpringMVC中配置`GlobalHandlerExceptionResolver`
+
+```java
+  @Bean
+  public HandlerExceptionResolver getExceptionResolver() {
+    return new GlobalHandlerExceptionResolver();
+  }
+
+  @Override
+  public void extendHandlerExceptionResolvers(final List<HandlerExceptionResolver> resolvers) {
+    // 将GlobalHandlerExceptionResolver添加到解析器列表中，执行顺序设置为第一个（小坑：如果不设置为第一个后续不会执行）
+    resolvers.add(0, getExceptionResolver());
+  }
+```
+
+拦截器中获取设置好的异常信息
+
+```java
+  @Override
+  public void afterCompletion(final HttpServletRequest request,
+                              final HttpServletResponse response,
+                              final Object handler,
+                              final Exception ex) throws Exception {
+    try {
+      final String method = request.getMethod();
+      final String requestUri = request.getRequestURI();
+      final String protocol = "HTTP";
+      String ip = request.getHeader("x-forwarded-for");
+      ip = ip != null ? ip : "127.0.0.1";
+      final String status = String.valueOf(response.getStatus());
+      final UserDTO userDto = UserContext.getDto();
+      final String id = userDto.getId();
+      final String username = userDto.getUsername();
+      final String logType = LogContext.getCtx(Constants.LOG_TYPE);
+      final String logDesc = LogContext.getCtx(Constants.LOG_DESC);
+      final String requestParams = LogContext.getCtx(Constants.LOG_REQUEST_PARAMS);
+      final String remark = LogContext.getCtx(Constants.REMARKS) != null
+          ? LogContext.getCtx(Constants.REMARKS) : "remark";
+      final String logId = IDUtils.uuid();
+      String msg = "OK";
+      if (!("200").equals(status)) {
+        // 从当前线程的ThreadLocal中获取异常信息
+        msg = LogContext.getCtx(Constants.AUDIT_EXCEPTION) != null
+            ? LogContext.getCtx(Constants.AUDIT_EXCEPTION) : "exception";
+      }
+      // 清除当前线程的ThreadLocal的信息，防止别的线程获取
+      LogContext.clear();
+      UserContext.clear();
+      final StringBuilder logStr = new StringBuilder(logId + " " + id + " " + username + " "
+          + ip + " " + method + " " + requestUri + " " + protocol + " " + requestParams + " "
+          + status + " " + msg + " " + serverName + " " + logType + " " + logDesc + " " + remark);
+      if (StringUtils.hasLength(logType) && StringUtils.hasLength(logDesc)) {
+        log.trace(String.valueOf(logStr));
+      }
+    } catch (NotHasVariablesException e) {
+      log.error("audit log error: ", e);
+    }
+
+  }
+```
+
+**`afterCompletion`方法中的参数ex获取不到异常：**
+
+查看SpringMVC的DispatcherServlet的doDispatch方法
+
+```java
+protected void doDispatch(HttpServletRequest request, HttpServletResponse response) throws Exception {
+		...
+		processDispatchResult(processedRequest, response, mappedHandler, mv, dispatchException);
+		...
+	}
+```
+
+`dispatchException`就是获取到的异常对象，查看`processDispatchResult`方法
+
+```java
+private void processDispatchResult(HttpServletRequest request, HttpServletResponse response,
+			@Nullable HandlerExecutionChain mappedHandler, @Nullable ModelAndView mv,
+			@Nullable Exception exception) throws Exception {
+
+		...
+
+		if (mappedHandler != null) {
+			// Exception (if any) is already handled..
+			mappedHandler.triggerAfterCompletion(request, response, null);
+		}
+	}
+```
+
+细心查看源码发现`mappedHandler`是不会为空的，所以执行后面的方法，方法中的异常对象被设为null，所以在拦截器的`afterCompletion`方法中是获取不到异常对象的。
+
+**`HandlerExceptionResolver`执行顺序的问题：**
+
+查看源码查看`processDispatchResult`方法
+
+```java
+private void processDispatchResult(HttpServletRequest request, HttpServletResponse response,
+			@Nullable HandlerExecutionChain mappedHandler, @Nullable ModelAndView mv,
+			@Nullable Exception exception) throws Exception {
+
+		boolean errorView = false;
+
+		if (exception != null) {
+			if (exception instanceof ModelAndViewDefiningException) {
+				logger.debug("ModelAndViewDefiningException encountered", exception);
+				mv = ((ModelAndViewDefiningException) exception).getModelAndView();
+			}
+			else {
+				Object handler = (mappedHandler != null ? mappedHandler.getHandler() : null);
+				mv = processHandlerException(request, response, handler, exception);
+				errorView = (mv != null);
+			}
+		}
+
+		...
+	}
+```
+
+查看`processHandlerException`方法
+
+```java
+protected ModelAndView processHandlerException(HttpServletRequest request, HttpServletResponse response,
+			@Nullable Object handler, Exception ex) throws Exception {
+
+		// Success and error responses may use different content types
+		request.removeAttribute(HandlerMapping.PRODUCIBLE_MEDIA_TYPES_ATTRIBUTE);
+
+		// Check registered HandlerExceptionResolvers...
+		ModelAndView exMv = null;
+		if (this.handlerExceptionResolvers != null) {
+			for (HandlerExceptionResolver resolver : this.handlerExceptionResolvers) {
+				exMv = resolver.resolveException(request, response, handler, ex);
+				if (exMv != null) {
+					break;
+				}
+			}
+		}
+		...
+
+		throw ex;
+	}
+```
+
+这里会对`handlerExceptionResolvers`列表进行遍历，如果第一个解析器的`resolveException`方法返回不为null，后续的解析器都不会再执行，SpringMVC默认的几个解析器返回都不为空，所以我们必须将自定义的解析器顺序排在第一个，而且返回的值必须为空为了让后续的解析器还回执行。
+
 ## 问题记录
 
 ### CI/CD
