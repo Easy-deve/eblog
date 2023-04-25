@@ -752,6 +752,10 @@ public class DemoTest {
 
 ### Git
 
+<img src="img/git-img-1.jpeg" alt="Screenshot" style="zoom:100%;" />
+
+<img src="img/git-img-2.jpeg" alt="Screenshot" style="zoom:100%;" />
+
 ### Docker
 
 <img src="img/docker-img.png" alt="Screenshot" style="zoom:50%;" />
